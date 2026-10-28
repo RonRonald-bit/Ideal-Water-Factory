@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Ideal-Water-Factory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: #0b1120; 
+            color: #e2e8f0; 
+            margin: 0; 
+            font-size: 14px; 
+        }
+        .card { 
+            background: #111827; 
+            border: 1px solid #1f2937; 
+            border-radius: 12px; 
+            overflow: hidden; 
+        }
+        .nav-btn { 
+            padding: 10px 16px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            font-weight: 500; 
+            color: #94a3b8; 
+            transition: all 0.15s; 
+            white-space: nowrap; 
+        }
+        .nav-btn:hover { 
+            background: #1e293b; 
+            color: #e2e8f0; 
+        }
+        .nav-btn.active { 
+            background: #2563eb; 
+            color: white; 
+        }
+        .page { 
+            display: none; 
+        }
+        .page.active { 
+            display: block; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 13px; 
+        }
+        @media (max-width: 1024px) {
+            table { min-width: 1100px; }
+        }
+        @media (min-width: 1025px) {
+            /* Faqat mashinalar — kompyuterda to'liq, scroll yo'q */
+            body .max-w-7xl { max-width: none !important; width: 100% !important; }
+            #mashinaCard .scroll-x {
+                overflow-x: hidden !important;
+                overflow-y: visible !important;
+            }
+            #mashinaCard table {
+                min-width: 0 !important;
+                width: 100% !important;
+                table-layout: fixed !important;
+            }
+            #mashinaCard th,
+            #mashinaCard td {
+                white-space: normal !important;
+                overflow: hidden !important;
+                padding: 4px 1px !important;
+                font-size: 10px !important;
+            }
+            #mashinaCard th { font-size: 9px !important; line-height: 1.2 !important; }
+            #mashinaCard #mainBody input,
+            #mashinaCard #mainBody .mashina,
+            #mashinaCard input {
+                min-width: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 34px !important;
+                padding: 2px 1px !important;
+                font-size: 12px !important;
+                box-sizing: border-box !important;
+            }
+        }
+        th { 
+            background: #0f172a; 
+            color: #94a3b8; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            padding: 8px 6px; 
+            border-bottom: 1px solid #1f2937; 
+            white-space: nowrap; 
+        }
+        td { 
+            padding: 4px 5px; 
+            border-bottom: 1px solid #1f2937; 
+            text-align: center; 
+        }
+        tr:hover td { 
+            background: #1e293b; 
+        }
+        input, select {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #f1f5f9;
+            text-align: center;
+            padding: 8px 6px;
+            font-size: 15px;
+            min-height: 42px;
+            min-width: 0;
+            font-family: ui-monospace, monospace;
+            box-sizing: border-box;
+        }
+        /* Mobil/planshet: kengroq (pastda @media) */
+        #mainBody input, #mainBody .mashina {
+            min-width: 0;
+        }
+        #mainBody .mashina {
+            min-width: 0;
+        }
+        .scroll-x {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* Kompaniya jadvali ham keng */
+        #kompBody input {
+            min-width: 75px;
+        }
+        #kompBody input[type="text"], #kompBody input[style*="text-align"] {
+            min-width: 120px;
+        }
+        #ishchiBody input {
+            min-width: 80px;
+        }
+        #ishchiBody input[style*="text-align"] {
+            min-width: 110px;
+        }
+        input:focus, select:focus { outline: none; border-color: #3b82f6; background: #1e293b; }
+        .mashina { color: #93c5fd; font-weight: 600; }
+        .g1 { background: rgba(30,58,138,0.1); }
+        .g2 { background: rgba(8,145,178,0.08); }
+        .g3 { background: rgba(124,58,237,0.08); }
+        .g4 { background: rgba(190,24,93,0.08); }
+        .g5 { background: rgba(180,83,9,0.08); }
+        .total-row td {
+            background: #0f172a; 
+            font-weight: 700; 
+            border-top: 2px solid #334155; 
+        }
+        .scroll-x { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; }
+        .stat-card { 
+            background: #0f172a; 
+            border: 1px solid #1f2937; 
+            border-radius: 10px; 
+            padding: 14px; 
+        }
+        .stat-num { 
+            font-size: 24px; 
+            font-weight: 800; 
+        }
+        .del-btn { 
+            color: #f87171; 
+            cursor: pointer; 
+            padding: 4px 8px; 
+            font-size: 16px; 
+        }
+        .del-btn:hover { 
+            color: #ef4444; 
+        }
+        .lang-btn { 
+            padding: 6px 10px; 
+            border-radius: 6px; 
+            font-size: 12px; 
+            font-weight: 600; 
+            color: #94a3b8; 
+            border: 1px solid #334155; 
+            background: transparent; 
+            cursor: pointer; 
+            min-height: 36px; 
+        }
+        .lang-btn.active { 
+            background: #2563eb;
+            color: white; 
+            border-color: #2563eb; 
+        }
+        .result-box { 
+            background: #064e3b; 
+            border: 2px solid #10b981; 
+            border-radius: 12px; 
+            padding: 16px; 
+            text-align: center; 
+        }
+        .result-num { 
+            font-size: 28px; 
+            font-weight: 900; 
+            color: #6ee7b7; 
+        }
+
+        /* MOBILE - kattaroq inputlar */
+        @media (max-width: 768px) {
+            body { font-size: 15px; }
+            input, select {
+                font-size: 16px !important;
+                padding: 10px 8px !important;
+                min-height: 48px !important;
+                min-width: 72px !important;
+                border-radius: 8px;
+            }
+            #mainBody input, #mainBody .mashina {
+                min-width: 72px !important;
+            }
+            #mainBody .mashina {
+                min-width: 85px !important;
+            }
+            #mashinaCard table,
+            table {
+                min-width: 1100px !important;
+            }
+            #mashinaCard .scroll-x {
+                overflow-x: auto !important;
+            }
+            th { font-size: 11px; padding: 8px 4px; }
+            td { padding: 4px 3px; }
+            .nav-btn { padding: 10px 12px; font-size: 13px; }
+            .stat-num { font-size: 22px; }
+            .lang-btn { min-height: 40px; padding: 8px 10px; }
+        }
+
+        /* PRINT — kunlik to'liq keng; oylik siqilgan, ortiqcha joy yo'q */
+        @media print {
+            @page { size: A4 landscape; margin: 4mm; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
+            .no-print, .app-modal-overlay { display: none !important; }
+            html, body {
+                background: #fff !important; color: #000 !important;
+                font-size: 8px !important; margin: 0 !important; padding: 0 !important;
+            }
+            .max-w-7xl { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+            .page { display: none !important; }
+            .page.print-show { display: block !important; }
+            .print-header {
+                display: block !important; text-align: center; margin: 0 0 4px 0;
+                padding: 2px 0 4px 0; border-bottom: 2px solid #000;
+            }
+            .print-header h1 { font-size: 13px; font-weight: 700; color: #000; margin: 0; }
+            .print-header .print-date { font-size: 10px; color: #000; margin-top: 1px; display: block !important; font-weight: 600; }
+            .card {
+                border: 1.2px solid #000 !important; background: #fff !important; border-radius: 0 !important;
+                margin: 0 0 4px 0 !important; overflow: visible !important; page-break-inside: avoid;
+                box-shadow: none !important; padding: 0 !important;
+            }
+            .card > .p-3, .card > .p-4 { padding: 2px 4px !important; }
+            .scroll-x { overflow: visible !important; }
+            table {
+                width: 100% !important; min-width: 0 !important; table-layout: fixed !important;
+                border-collapse: collapse !important; border: 1.2px solid #000 !important; margin: 0 !important;
+            }
+            th, td {
+                border: 1px solid #333 !important; color: #000 !important;
+                padding: 3px 3px !important; background: #fff !important;
+                vertical-align: middle !important; text-align: center !important;
+                word-break: break-word; overflow: visible !important; white-space: normal !important;
+            }
+            th {
+                background: #e0e0e0 !important; font-size: 6.5px !important; font-weight: 700 !important;
+                text-transform: uppercase; line-height: 1.15;
+            }
+            td { font-size: 7.5px !important; line-height: 1.2; }
+            .total-row td { background: #ececec !important; font-weight: 700 !important; border-top: 1.5px solid #000 !important; }
+            input, select {
+                border: none !important; background: transparent !important; color: #000 !important;
+                font-size: 7.5px !important; min-height: 0 !important; min-width: 0 !important;
+                padding: 3px 4px !important; border-radius: 0 !important; width: 100% !important;
+                box-shadow: none !important; outline: none !important;
+                text-align: center !important; margin: 0 auto !important;
+                display: block !important;
+                
+            }
+            input::-webkit-outer-spin-button,
+            input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+            input::placeholder { color: transparent !important; opacity: 0 !important; }
+            .g1,.g2,.g3,.g4,.g5 { background: transparent !important; }
+            .stat-card {
+                border: 1.2px solid #000 !important; background: #fff !important; border-radius: 0 !important;
+                padding: 3px 5px !important; text-align: center !important;
+            }
+            .stat-num { color: #000 !important; font-size: 11px !important; font-weight: 700 !important; text-align: center !important; }
+            .result-box {
+                border: 2px solid #000 !important; background: #f5f5f5 !important; border-radius: 0 !important;
+                padding: 6px !important; margin: 0 !important;
+            }
+            .result-num { color: #000 !important; font-size: 14px !important; }
+            .text-emerald-400, .text-cyan-400, .text-amber-400, .text-rose-400,
+            .text-blue-300, .text-emerald-300, .text-white, .mashina, .text-slate-400, .text-slate-500,
+            .text-emerald-200, .mashina { color: #000 !important; background: transparent !important; }
+            header, nav { display: none !important; }
+            .space-y-4 { gap: 0 !important; }
+            .space-y-4 > * + * { margin-top: 4px !important; }
+            .grid { display: grid !important; gap: 3px !important; }
+            .grid.grid-cols-2 { grid-template-columns: 1fr 1fr !important; }
+            .lg\:grid-cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr !important; }
+            .lg\:grid-cols-2 { grid-template-columns: 1fr 1fr !important; }
+
+            /* Kunlik mashina jadvali — to'liq keng, scroll yo'q */
+            #mashinaCard .scroll-x { overflow: visible !important; }
+            #mashinaCard table { width: 100% !important; min-width: 0 !important; table-layout: fixed !important; }
+            #mashinaCard th, #mashinaCard td {
+                font-size: 6.5px !important; padding: 2px 1px !important; text-align: center !important;
+            }
+            #mashinaCard input {
+                font-size: 7px !important; padding: 2px 1px !important; text-align: center !important;
+            }
+
+            /* Oylik — sonlar markazda, matn qiraga yopishmasin */
+            #page-oylik .space-y-4 > * + * { margin-top: 3px !important; }
+            #page-oylik .card { margin-bottom: 3px !important; }
+            #page-oylik .p-3 { padding: 5px 8px !important; }
+            #page-oylik input {
+                font-size: 8px !important;
+                padding: 4px 6px !important;
+                text-align: center !important;
+                display: block !important;
+                width: 100% !important;
+            }
+            #page-oylik th { font-size: 7px !important; padding: 4px 4px !important; text-align: center !important; }
+            #page-oylik td { font-size: 8px !important; padding: 3px 4px !important; text-align: center !important; }
+            #page-oylik .result-box { padding: 8px !important; margin-top: 2px !important; text-align: center !important; }
+            #page-oylik .result-num { font-size: 16px !important; text-align: center !important; }
+            #page-oylik .grid { gap: 4px !important; }
+            #page-oylik .text-xl { font-size: 12px !important; text-align: center !important; }
+            #page-oylik .font-black { font-size: 12px !important; text-align: center !important; }
+            #page-oylik .font-bold { text-align: center !important; }
+            #page-oylik .flex { justify-content: center !important; }
+            #page-oylik .justify-between { justify-content: space-between !important; padding-left: 6px !important; padding-right: 6px !important; }
+            #page-oylik label, #page-oylik span { padding: 0 4px !important; }
+        }
+
+        /* Mashina PDF — sonlar aniq markazda */
+        @media print {
+            #mashinaCard input {
+                text-align: center !important;
+                padding: 3px 2px !important;
+                display: block !important;
+            }
+            #mashinaCard td, #mashinaCard th {
+                text-align: center !important;
+            }
+        }
+
+        /* Custom modal */
+        .app-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        .app-modal-overlay.show { display: flex; }
+        .app-modal {
+            width: 100%; max-width: 380px; background: #111827;
+            border: 1px solid #334155; border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .app-modal-head {
+            padding: 18px 20px 8px; display: flex; gap: 12px; align-items: flex-start;
+        }
+        .app-modal-icon {
+            width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+            background: rgba(16, 185, 129, 0.15); color: #34d399;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+        }
+        .app-modal-title { font-size: 16px; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
+        .app-modal-text { font-size: 13px; color: #94a3b8; line-height: 1.45; margin: 0; }
+        .app-modal-actions {
+            padding: 16px 20px 20px; display: flex; gap: 10px;
+        }
+        .app-modal-actions button {
+            flex: 1; min-height: 46px; border-radius: 10px; font-size: 14px; font-weight: 600;
+            cursor: pointer; border: none;
+        }
+        .btn-modal-no {
+            background: #1e293b; color: #e2e8f0; border: 1px solid #334155 !important;
+        }
+        .btn-modal-no:hover { background: #334155; }
+        .btn-modal-yes {
+            background: #dc2626; color: white;
+        }
+        .btn-modal-yes:hover { background: #ef4444; }
+        @media print { .app-modal-overlay { display: none !important; } }
+
+        .print-header { display: none; }
+
+        /* PRINT kuchaytirilgan: markaz + sariq fon yo'q */
+        @media print {
+            input, select, textarea {
+                -webkit-appearance: none !important;
+                appearance: none !important;
+                background: #fff !important;
+                background-color: #fff !important;
+                color: #000 !important;
+                text-align: center !important;
+                text-align-last: center !important;
+                box-shadow: none !important;
+                -webkit-box-shadow: none !important;
+                filter: none !important;
+            }
+            input:-webkit-autofill,
+            input:-webkit-autofill:hover,
+            input:-webkit-autofill:focus {
+                -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+                box-shadow: 0 0 0 1000px #fff inset !important;
+                -webkit-text-fill-color: #000 !important;
+                background-color: #fff !important;
+            }
+            #mashinaCard input,
+            #mashinaCard .mashina,
+            #mainBody input {
+                text-align: center !important;
+                text-align-last: center !important;
+                background: transparent !important;
+                background-color: transparent !important;
+                color: #000 !important;
+                padding: 2px 0 !important;
+            }
+            #mashinaCard td,
+            #mashinaCard th {
+                text-align: center !important;
+            }
+            #page-oylik input {
+                text-align: center !important;
+                text-align-last: center !important;
+                padding: 4px 6px !important;
+            }
+            #page-oylik td,
+            #page-oylik th {
+                text-align: center !important;
+                padding: 4px 6px !important;
+            }
+            /* Prixod/Rasxod — ichkariga */
+            #page-oylik .card .p-3,
+            #page-oylik .card > div {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+        }
+
+
+        /* PDF rangli + oylik grid + suv/brak katta */
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .print-col-head {
+                display: grid !important;
+                grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+                gap: 4px !important;
+                font-weight: 700 !important;
+                color: #000 !important;
+                border-bottom: 1px solid #999 !important;
+                padding-bottom: 3px !important;
+                margin-bottom: 4px !important;
+            }
+            #prixodRows > div,
+            #rasxodRows > div {
+                display: grid !important;
+                grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+                gap: 4px !important;
+                align-items: center !important;
+                margin-bottom: 3px !important;
+            }
+
+            #prixodRows .col-span-4, #rasxodRows .col-span-4, .print-col-head .col-span-4 { grid-column: span 4 / span 4 !important; }
+            #prixodRows .col-span-3, #rasxodRows .col-span-3, .print-col-head .col-span-3 { grid-column: span 3 / span 3 !important; }
+            #prixodRows .col-span-1, #rasxodRows .col-span-1 { display: none !important; }
+            #prixodRows .print-val,
+            #rasxodRows .print-val {
+                text-align: center !important;
+                border: 1px solid #ccc !important;
+                padding: 4px 3px !important;
+                min-height: 16px !important;
+            }
+            /* Bugun suv / Brak — katta qora */
+            #bugunSuv, #brakSoni,
+            #yaroqli, #brakFoiz,
+            .stat-num, .stat-card .print-val {
+                font-size: 18px !important;
+                font-weight: 800 !important;
+                color: #000 !important;
+                text-align: center !important;
+            }
+            .stat-card {
+                border: 1.5px solid #333 !important;
+                background: #f8fafc !important;
+                padding: 6px 8px !important;
+            }
+            .stat-card .text-xs { color: #333 !important; font-size: 8px !important; }
+            /* Rangli PDF */
+            th { background: #dbeafe !important; color: #000 !important; }
+            .total-row td { background: #e2e8f0 !important; }
+            #page-oylik h2, #page-oylik .text-emerald-400 { color: #047857 !important; }
+            #page-oylik .text-rose-400 { color: #b91c1c !important; }
+            #jamiPrixod { color: #047857 !important; }
+            #jamiRasxod { color: #b91c1c !important; }
+            .result-box { background: #ecfdf5 !important; border: 2px solid #059669 !important; }
+            .result-num { color: #065f46 !important; }
+            .print-header h1 { color: #1e3a8a !important; }
+        }
+
+
+        /* PDF rangli: Bo'sh / Suv / Astatka / Jami yashil */
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            /* Guruh 1-5 fonlari */
+            #mashinaCard th.g1, #mashinaCard td.g1 { background: #dbeafe !important; }
+            #mashinaCard th.g2, #mashinaCard td.g2 { background: #cffafe !important; }
+            #mashinaCard th.g3, #mashinaCard td.g3 { background: #ede9fe !important; }
+            #mashinaCard th.g4, #mashinaCard td.g4 { background: #fce7f3 !important; }
+            #mashinaCard th.g5, #mashinaCard td.g5 { background: #ffedd5 !important; }
+            /* JAMI ustunlari — yashil */
+            #mashinaCard thead th[style*="064e3b"],
+            #mashinaCard thead th[style*="background:#064e3b"] {
+                background: #86efac !important; color: #14532d !important;
+            }
+            #tAllB, #tAllS, #tAllA,
+            #mashinaCard .jb, #mashinaCard .js, #mashinaCard .ja,
+            #mashinaCard tfoot td.text-emerald-400,
+            #mashinaCard tfoot td.text-cyan-400,
+            #mashinaCard tfoot td.text-amber-400 {
+                background: #bbf7d0 !important; color: #14532d !important; font-weight: 800 !important;
+            }
+            #mashinaCard tfoot .total-row td {
+                background: #dcfce7 !important; color: #14532d !important;
+            }
+            /* Oxirgi 3 ta jami ustun (Bo'sh/Suv/Astatka jami) */
+            #mashinaCard tbody td:nth-last-child(1),
+            #mashinaCard tbody td:nth-last-child(2),
+            #mashinaCard tbody td:nth-last-child(3) {
+                background: #dcfce7 !important; color: #14532d !important; font-weight: 700 !important;
+            }
+            #mashinaCard thead tr:last-child th:nth-last-child(1),
+            #mashinaCard thead tr:last-child th:nth-last-child(2),
+            #mashinaCard thead tr:last-child th:nth-last-child(3) {
+                background: #86efac !important; color: #14532d !important;
+            }
+            /* Bugun suv / Brak katta */
+            #bugunSuv, #brakSoni, .stat-card .print-val, #yaroqli, #brakFoiz {
+                font-size: 16px !important; font-weight: 800 !important; color: #000 !important;
+            }
+            .stat-card { background: #f0f9ff !important; border: 1.5px solid #38bdf8 !important; }
+            /* Oylik ranglar */
+            #jamiPrixod { color: #047857 !important; }
+            #jamiRasxod { color: #b91c1c !important; }
+            .result-box { background: #ecfdf5 !important; border: 2px solid #10b981 !important; }
+            .result-num { color: #065f46 !important; }
+            th { background: #dbeafe !important; }
+        }
+
+
+        @media print {
+            .print-hide-btn { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="no-print sticky top-0 z-50 border-b border-slate-800" style="background:#0f172aee;backdrop-filter:blur(10px)">
+    <div class="max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-lg">
+                <i class="fa-solid fa-bottle-water"></i>
+            </div>
+            <div>
+                <div class="font-extrabold text-light text-sm leading-tight">Ideal-Water-Factory</div>
+                <div class="text-[10px] text-slate-400">Factory Reports</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="flex gap-1">
+                <button class="lang-btn active" data-lang="uz" onclick="setLang('uz')">UZ</button>
+                <button class="lang-btn" data-lang="kr" onclick="setLang('kr')">КР</button>
+                <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+                <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+            </div>
+            <input type="date" id="reportDate" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white" style="width:140px;min-height:40px">
+            <button onclick="saqlash()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+                <i class="fa-solid fa-floppy-disk"></i> <span id="btnSave">Kunlik saqlash</span>
+            </button>
+            <button onclick="saqlashOylik()" class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+                <i class="fa-solid fa-floppy-disk"></i> <span id="btnSaveOylik">Oylik saqlash</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- MENYU -->
+<nav class="no-print border-b border-slate-800 bg-slate-900/80">
+    <div class="max-w-7xl mx-auto px-3 py-2 flex gap-1 overflow-x-auto items-center">
+        <button class="nav-btn active" data-page="asosiy" onclick="showPage('asosiy')">
+            <i class="fa-solid fa-calendar-day mr-1"></i> <span id="navAsosiy">Kunlik hisobot</span>
+        </button>
+        <button class="nav-btn" data-page="oylik" onclick="showPage('oylik')">
+            <i class="fa-solid fa-calendar mr-1"></i> <span id="navOylik">Oylik hisobot</span>
+        </button>
+        <div class="flex-1"></div>
+        <button onclick="printKunlik()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1">
+            <i class="fa-solid fa-file-pdf"></i> <span id="btnPdfKunlik">Kunlik PDF</span>
+        </button>
+        <button onclick="printOylik()" class="bg-violet-700 hover:bg-violet-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1">
+            <i class="fa-solid fa-file-pdf"></i> <span id="btnPdfOylik">Oylik PDF</span>
+        </button>
+    </div>
+</nav>
+
+<div class="max-w-7xl mx-auto p-3 space-y-4">
+
+    <!-- ========== KUNLIK HISOBOT ========== -->
+    <div id="page-asosiy" class="page active space-y-4">
+        <div class="print-header">
+            <h1>Ideal-Water-Factory — Kunlik hisoboti</h1>
+            <div class="print-date" id="printDateKunlik"></div>
+        </div>
+
+        <!-- Mashinalar -->
+        <div class="card" id="mashinaCard">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center no-print">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-table text-blue-400 mr-2"></i><span id="titleMashina">Mashinalar bo‘yicha hisob</span></h2>
+                <button onclick="tozalaAsosiy()" class="text-xs text-amber-400" id="btnTozala">Tozalash</button>
+            </div>
+            <div class="scroll-x">
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">#</th>
+                            <th rowspan="2" id="thMashina">Mashina</th>
+                            <th colspan="3" class="g1">1</th>
+                            <th colspan="3" class="g2">2</th>
+                            <th colspan="3" class="g3">3</th>
+                            <th colspan="3" class="g4">4</th>
+                            <th colspan="3" class="g5">5</th>
+                            <th colspan="3" style="background:#064e3b">Jami</th>
+                        </tr>
+                        <tr>
+                            <th class="g1">Bo‘sh</th><th class="g1">Suv Berilgan</th><th class="g1">Astatka</th>
+                            <th class="g2">Bo‘sh</th><th class="g2">Suv Berilgan</th><th class="g2">Astatka</th>
+                            <th class="g3">Bo‘sh</th><th class="g3">Suv Berilgan</th><th class="g3">Astatka</th>
+                            <th class="g4">Bo‘sh</th><th class="g4">Suv Berilgan</th><th class="g4">Astatka</th>
+                            <th class="g5">Bo‘sh</th><th class="g5">Suv Berilgan</th><th class="g5">Astatka</th>
+                            <th style="background:#064e3b;color:#6ee7b7">Bo‘sh</th>
+                            <th style="background:#064e3b;color:#6ee7b7">Suv Bergan</th>
+                            <th style="background:#064e3b;color:#6ee7b7">Astatka</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainBody"></tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2">JAMI</td>
+                            <td id="t1b">0</td><td id="t1s">0</td><td id="t1a">0</td>
+                            <td id="t2b">0</td><td id="t2s">0</td><td id="t2a">0</td>
+                            <td id="t3b">0</td><td id="t3s">0</td><td id="t3a">0</td>
+                            <td id="t4b">0</td><td id="t4s">0</td><td id="t4a">0</td>
+                            <td id="t5b">0</td><td id="t5s">0</td><td id="t5a">0</td>
+                            <td id="tAllB" class="text-emerald-400">0</td>
+                            <td id="tAllS" class="text-cyan-400">0</td>
+                            <td id="tAllA" class="text-amber-400">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Brak & Suv -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="stat-card">
+                <div class="text-xs text-slate-400 mb-1" id="lblBugunSuv">Bugun quyilgan suv</div>
+                <input type="number" id="bugunSuv" placeholder="0" class="stat-num text-cyan-400 bg-transparent border-0 text-left p-0 w-full" oninput="hisoblaBrak()">
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-slate-400 mb-1" id="lblBrak">Brak</div>
+                <input type="number" id="brakSoni" placeholder="0" class="stat-num text-rose-400 bg-transparent border-0 text-left p-0 w-full" oninput="hisoblaBrak()">
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-slate-400 mb-1" id="lblYaroqli">Yaroqli</div>
+                <div id="yaroqli" class="stat-num text-emerald-400">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-slate-400 mb-1" id="lblBrakFoiz">Brak %</div>
+                <div id="brakFoiz" class="stat-num text-rose-400">0%</div>
+            </div>
+        </div>
+
+        <!-- Kompaniyalar -->
+        <div class="card">
+            <div class="p-3 border-b border-slate-800 no-print">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-truck text-cyan-400 mr-2"></i><span id="titleKomp">Boshqa kompaniyalarga suv</span></h2>
+            </div>
+            <div class="scroll-x">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th class="text-left" id="thKomp">Kompaniya</th>
+                            <th id="thKBosh">Bo‘sh</th>
+                            <th id="thKSuv">Suv</th>
+                            <th id="thKOp">Op ketgani</th>
+                            <th id="thKPul">Pul bergani</th>
+                            <th id="thQol">Qogan</th>
+                            <th id="thKSana">Sana</th>
+                            <th class="text-left" id="thKIzoh">Izoh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kompBody"></tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2" class="text-right pr-2">Jami:</td>
+                            <td id="kB" class="text-emerald-400">0</td>
+                            <td id="kS" class="text-cyan-400">0</td>
+                            <td id="kO" class="text-amber-400">0</td>
+                            <td id="kP" class="text-emerald-400">0</td>
+                            <td id="Ql" class="text-amber-400">0</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tarix -->
+        <div class="card no-print">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-clock-rotate-left text-cyan-400 mr-2"></i><span id="titleTarix">Tarix</span></h2>
+                <button onclick="tozalaTarix()" class="text-xs text-rose-400" id="btnTarixTozala">Tozalash</button>
+            </div>
+            <div class="scroll-x">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sana</th>
+                            <th>Bo‘sh </th>
+                            <th>Suv bergan</th>
+                            <th>Astatka</th>
+                            <th>Brak</th>
+                            <th>Bugun quyilgan suv</th>
+                            <th>Komp. Bo‘sh</th>
+                            <th>Komp. Suv</th>
+                            <th>Komp. Op</th>
+                            <th>Komp. Pul</th>
+                            <th>Komp. Qogan</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tarixBody">
+                        <tr><td colspan="12" class="py-6 text-center text-slate-500" id="tarixEmpty">Hali yozuv yo‘q</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== OYLIK HISOBOT ========== -->
+    <div id="page-oylik" class="page space-y-4">
+        <div class="print-header">
+            <h1>Ideal-Water-Factory — Oylik hisoboti</h1>
+            <div class="print-date" id="printDateOylik"></div>
+        </div>
+
+        <!-- Prixod / Rasxod -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card">
+                <div class="p-3 border-b border-slate-800 flex justify-between items-center">
+                    <h2 class="font-semibold text-sm text-emerald-400"><i class="fa-solid fa-arrow-down mr-2"></i><span id="titlePrixod"> Prixod</span></h2>
+                    <button onclick="qoshPrixod()" class="no-print text-xs bg-emerald-700 text-white px-3 py-1.5 rounded-lg">+ Qo‘shish</button>
+                </div>
+                <div class="p-3 space-y-2">
+                    <div class="grid grid-cols-12 gap-2 text-xs text-slate-400 px-1 print-col-head">
+                        <div class="col-span-4">Nomi</div><div class="col-span-3">Summa</div><div class="col-span-4">Izoh</div><div class="col-span-1 no-print"></div>
+                    </div>
+                    <div id="prixodRows"></div>
+                </div>
+                <div class="p-3 border-t border-slate-800 flex justify-between font-bold">
+                    <span id="lblJamiPrixod">Jami Prixod:</span>
+                    <span id="jamiPrixod" class="text-emerald-400">0</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="p-3 border-b border-slate-800 flex justify-between items-center">
+                    <h2 class="font-semibold text-sm text-rose-400"><i class="fa-solid fa-arrow-up mr-2"></i><span id="titleRasxod">Rasxod</span></h2>
+                    <button onclick="qoshRasxod()" class="no-print text-xs bg-rose-700 text-white px-3 py-1.5 rounded-lg">+ Qo‘shish</button>
+                </div>
+                <div class="p-3 space-y-2">
+                    <div class="grid grid-cols-12 gap-2 text-xs text-slate-400 px-1 print-col-head">
+                        <div class="col-span-4">Nomi</div><div class="col-span-3">Summa</div><div class="col-span-4">Izoh</div><div class="col-span-1 no-print"></div>
+                    </div>
+                    <div id="rasxodRows"></div>
+                </div>
+                <div class="p-3 border-t border-slate-800 flex justify-between font-bold">
+                    <span id="lblJamiRasxod">Jami Rasxod:</span>
+                    <span id="jamiRasxod" class="text-rose-400">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prixod - Rasxod balans -->
+        <div class="card p-4 flex justify-between items-center">
+            <span class="font-semibold" id="lblBalansPR">Prixod − Rasxod:</span>
+            <span id="balansPR" class="text-xl font-black text-cyan-400">0</span>
+        </div>
+
+        <!-- Ishchilar oyligi -->
+        <div class="card">
+            <div class="p-3 border-b border-slate-800">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-users text-blue-400 mr-2"></i><span id="titleIshchi">Ishchilar oyligi</span></h2>
+            </div>
+            <div class="scroll-x">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th class="text-left" id="thIsm">Ism</th>
+                            <th id="thLavozim">Lavozim</th>
+                            <th id="thOylik">Oylik</th>
+                            <th id="thBonus">Bonus</th>
+                            <th id="thJarima">Jarima</th>
+                            <th>Jami</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ishchiBody"></tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3" class="text-right pr-2">Jami oylik:</td>
+                            <td id="jamiOylik" class="text-emerald-400">0</td>
+                            <td id="jamiBonus">0</td>
+                            <td id="jamiJarima">0</td>
+                            <td id="jamiIshchi" class="text-white font-bold">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Yakuniy hisob (notebookdagi kabi) -->
+        <div class="result-box">
+            <div class="text-sm text-emerald-200 mb-2" id="lblYakuniy">Yakuniy natija</div>
+            <div class="text-xs text-slate-300 mb-1" id="lblFormula">Jami oylik − (Prixod − Rasxod)</div>
+            <div class="result-num" id="yakuniyNatija">0</div>
+            <div class="text-xs text-slate-400 mt-2" id="yakuniyTushuntirish"></div>
+        </div>
+
+        <!-- Abet
+        <div class="card">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-utensils text-amber-400 mr-2"></i><span id="titleAbet">Abet va boshqa xarajatlar</span></h2>
+                <button onclick="qoshAbet()" class="no-print text-xs bg-amber-700 text-white px-3 py-1.5 rounded-lg">+ Qo‘shish</button>
+            </div>
+            <div class="p-3 space-y-2">
+                <div class="grid grid-cols-12 gap-2 text-xs text-slate-400 px-1 no-print">
+                    <div class="col-span-3">Nomi</div><div class="col-span-3">Summa</div><div class="col-span-3">Sana</div><div class="col-span-2">Izoh</div><div class="col-span-1"></div>
+                </div>
+                <div id="abetRows"></div>
+            </div>
+            <div class="p-3 border-t border-slate-800 flex justify-between font-bold">
+                <span id="lblJamiAbet">Jami abet:</span>
+                <span id="jamiAbet" class="text-amber-400">0</span>
+            </div>
+        </div> -->
+
+        <!-- Oylik tarix (alohida) -->
+        <div class="card no-print">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="font-semibold text-sm"><i class="fa-solid fa-clock-rotate-left text-violet-400 mr-2"></i>Oylik hisobot tarixi</h2>
+                <button onclick="tozalaOylikTarix()" class="text-xs text-rose-400">Tozalash</button>
+            </div>
+            <div class="scroll-x">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sana</th>
+                            <th>Prixod</th>
+                            <th>Rasxod</th>
+                            <th>Balans PR</th>
+                            <th>Jami oylik</th>
+                            <th>Yakuniy</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="oylikTarixBody">
+                        <tr><td colspan="7" class="py-6 text-center text-slate-500">Hali yozuv yo‘q</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const dict = {
+        uz: { btnSave:'Kunlik saqlash', navAsosiy:'Kunlik hisobot', navOylik:'Oylik hisobot', btnPdfKunlik:'Kunlik PDF', btnPdfOylik:'Oylik PDF',
+            titleMashina:'Mashinalar hisobi', btnTozala:'Tozalash', thMashina:'Mashina',
+            lblBugunSuv:'Bugun quyilgan suv', lblBrak:'Brak', lblYaroqli:'Yaroqli', lblBrakFoiz:'Brak %',
+            titleKomp:'Boshqa kompaniyalarga suv', thKomp:'Kompaniya', thKBosh:'Bo‘sh', thKSuv:'Suv', thKPul:'Pul bergani', thKOp:'Op ketgani', thKSana:'Sana', thKIzoh:'Izoh',
+            titleTarix:'Tarix', btnTarixTozala:'Tozalash', tarixEmpty:'Hali yozuv yo‘q',
+            titlePrixod:'Prixod', titleRasxod:'Rasxod', lblJamiPrixod:'Jami Prixod:', lblJamiRasxod:'Jami Rasxod:', lblBalansPR:'Prixod − Rasxod:',
+            titleIshchi:'Ishchilar oyligi', thIsm:'Ism', thLavozim:'Lavozim', thOylik:'Oylik', thBonus:'Bonus', thJarima:'Jarima',
+            titleAbet:'Abet va boshqa xarajatlar', lblJamiAbet:'Jami abet:',
+            lblYakuniy:'Yakuniy natija', lblFormula:'Jami oylik − (Prixod − Rasxod)' },
+        kr: { btnSave:'Кунлик сақлаш', navAsosiy:'Кунлик ҳисобот', navOylik:'Ойлик ҳисобот', btnPdfKunlik:'Кунлик PDF', btnPdfOylik:'Ойлик PDF',
+            titleMashina:'Машиналар ҳисоби', btnTozala:'Тозалаш', thMashina:'Машина',
+            lblBugunSuv:'Бугун қуйилган сув', lblBrak:'Брак', lblYaroqli:'Яроқли', lblBrakFoiz:'Брак %',
+            titleKomp:'Бошқа компанияларга сув', thKomp:'Компания', thKBosh:'Бўш', thKSuv:'Сув', thKPul:'Пул бергани', thKOp:'Оп кетгани', thKSana:'Сана', thKIzoh:'Изоҳ',
+            titleTarix:'Тарих', btnTarixTozala:'Тозалаш', tarixEmpty:'Ҳали ёзув йўқ',
+            titlePrixod:'Приход', titleRasxod:'Расход', lblJamiPrixod:'Жами Приход:', lblJamiRasxod:'Жами Расход:', lblBalansPR:'Приход − Расход:',
+            titleIshchi:'Ишчилар ойлиги', thIsm:'Исм', thLavozim:'Лавозим', thOylik:'Ойлик', thBonus:'Бонус', thJarima:'Жарима',
+            titleAbet:'Абет ва бошқа харажатлар', lblJamiAbet:'Жами абет:',
+            lblYakuniy:'Якуний натижа', lblFormula:'Жами ойлик − (Приход − Расход)' },
+        ru: { btnSave:'Дневной сохранить', navAsosiy:'Дневной отчёт', navOylik:'Месячный отчёт', btnPdfKunlik:'Дневной PDF', btnPdfOylik:'Месячный PDF',
+            titleMashina:'Учёт машин', btnTozala:'Очистить', thMashina:'Машина',
+            lblBugunSuv:'Залито сегодня', lblBrak:'Брак', lblYaroqli:'Годное', lblBrakFoiz:'% брака',
+            titleKomp:'Вода другим компаниям', thKomp:'Компания', thKBosh:'Пусто', thKSuv:'Вода', thKPul:'Оплачено', thKOp:'Увезено', thKSana:'Дата', thKIzoh:'Примечание',
+            titleTarix:'История', btnTarixTozala:'Очистить', tarixEmpty:'Нет записей',
+            titlePrixod:'Приход', titleRasxod:'Расход', lblJamiPrixod:'Итого Приход:', lblJamiRasxod:'Итого Расход:', lblBalansPR:'Приход − Расход:',
+            titleIshchi:'Зарплата', thIsm:'Имя', thLavozim:'Должность', thOylik:'Оклад', thBonus:'Бонус', thJarima:'Штраф',
+            titleAbet:'Обед и расходы', lblJamiAbet:'Итого обед:',
+            lblYakuniy:'Итоговый результат', lblFormula:'Зарплата − (Приход − Расход)' },
+        en: { btnSave:'Daily save', navAsosiy:'Daily Report', navOylik:'Monthly Report', btnPdfKunlik:'Daily PDF', btnPdfOylik:'Monthly PDF',
+            titleMashina:'Machine report', btnTozala:'Clear', thMashina:'Machine',
+            lblBugunSuv:'Filled today', lblBrak:'Defects', lblYaroqli:'Valid', lblBrakFoiz:'Defect %',
+            titleKomp:'Water to companies', thKomp:'Company', thKBosh:'Empty', thKSuv:'Water', thKPul:'Paid', thKOp:'Taken', thKSana:'Date', thKIzoh:'Note',
+            titleTarix:'History', btnTarixTozala:'Clear', tarixEmpty:'No records',
+            titlePrixod:'Income', titleRasxod:'Expense', lblJamiPrixod:'Total Income:', lblJamiRasxod:'Total Expense:', lblBalansPR:'Income − Expense:',
+            titleIshchi:'Workers salary', thIsm:'Name', thLavozim:'Position', thOylik:'Salary', thBonus:'Bonus', thJarima:'Fine',
+            titleAbet:'Lunch & expenses', lblJamiAbet:'Total lunch:',
+            lblYakuniy:'Final result', lblFormula:'Salary − (Income − Expense)' }
+    };
+    let currentLang = 'uz';
+    function setLang(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+        const d = dict[lang];
+        for (const [id, text] of Object.entries(d)) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+        hisoblaYakuniy();
+    }
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('page-' + id).classList.add('active');
+        document.querySelector(`[data-page="${id}"]`)?.classList.add('active');
+    }
+
+    // ===== PDF =====
+    let clearModalAction = null;
+    function openClearModal(title, text, onYes) {
+        clearModalAction = onYes;
+        document.getElementById('clearModalTitle').textContent = title;
+        document.getElementById('clearModalText').textContent = text;
+        document.getElementById('clearModal').classList.add('show');
+    }
+    function closeClearModal(yes) {
+        document.getElementById('clearModal').classList.remove('show');
+        if (yes && typeof clearModalAction === 'function') clearModalAction();
+        clearModalAction = null;
+    }
+
+    function printKunlik() {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('print-show'));
+        document.getElementById('page-asosiy').classList.add('print-show');
+        document.getElementById('printDateKunlik').textContent = 'Sana: ' + (document.getElementById('reportDate').value || '—');
+        saveDraft();
+        // Edge/Chrome/Firefox: input o'rniga markazlangan matn
+        if (typeof preparePrintText === 'function') preparePrintText();
+        window.print();
+        setTimeout(function() {
+            if (typeof restoreAfterPrint === 'function') restoreAfterPrint();
+            openClearModal(
+                'Kunlik PDF chiqarildi',
+                'Formani tozalaymizmi? Tozalansa, kiritilgan raqamlar o‘chadi. Tarix saqlanib qoladi.',
+                clearDraftAndForm
+            );
+        }, 800);
+    }
+    function printOylik() {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('print-show'));
+        document.getElementById('page-oylik').classList.add('print-show');
+        document.getElementById('printDateOylik').textContent = 'Sana: ' + (document.getElementById('reportDate').value || '—');
+        saveDraft();
+        if (typeof preparePrintText === 'function') preparePrintText();
+        window.print();
+        setTimeout(function() {
+            if (typeof restoreAfterPrint === 'function') restoreAfterPrint();
+            openClearModal(
+                'Oylik PDF chiqarildi',
+                'Oylik formani tozalaymizmi? Prixod, rasxod va ishchilar ma’lumotlari o‘chadi. Tarix saqlanadi.',
+                clearOylikForm
+            );
+        }, 800);
+    }
+
+    // ===== ASOSIY =====
+    function yaratAsosiy() {
+        const tbody = document.getElementById('mainBody');
+        tbody.innerHTML = '';
+        for (let i = 1; i <= 20; i++) {
+            tbody.innerHTML += `<tr>
+                <td class="text-slate-500">${i}</td>
+                <td><input class="mashina" data-i="${i}" placeholder="—" oninput="hisoblaAsosiy()"></td>
+                <td class="g1"><input type="number" class="b1" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g1"><input type="number" class="s1" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g1"><input type="number" class="a1" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g2"><input type="number" class="b2" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g2"><input type="number" class="s2" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g2"><input type="number" class="a2" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g3"><input type="number" class="b3" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g3"><input type="number" class="s3" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g3"><input type="number" class="a3" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g4"><input type="number" class="b4" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g4"><input type="number" class="s4" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g4"><input type="number" class="a4" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g5"><input type="number" class="b5" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g5"><input type="number" class="s5" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="g5"><input type="number" class="a5" data-i="${i}" oninput="hisoblaAsosiy()"></td>
+                <td class="text-emerald-400 jb" data-i="${i}">0</td>
+                <td class="text-cyan-400 js" data-i="${i}">0</td>
+                <td class="text-amber-400 ja" data-i="${i}">0</td>
+            </tr>`;
+        }
+    }
+
+    function hisoblaAsosiy() {
+        let allB=0, allS=0, allA=0;
+        const col = {b:[0,0,0,0,0,0], s:[0,0,0,0,0,0], a:[0,0,0,0,0,0]};
+        for (let i=1; i<=20; i++) {
+            let rb=0, rs=0, ra=0;
+            for (let g=1; g<=5; g++) {
+                const b = +document.querySelector(`.b${g}[data-i="${i}"]`)?.value || 0;
+                const s = +document.querySelector(`.s${g}[data-i="${i}"]`)?.value || 0;
+                const a = +document.querySelector(`.a${g}[data-i="${i}"]`)?.value || 0;
+                col.b[g]+=b; col.s[g]+=s; col.a[g]+=a;
+                rb+=b; rs+=s; ra+=a;
+            }
+            document.querySelector(`.jb[data-i="${i}"]`).textContent = rb||'';
+            document.querySelector(`.js[data-i="${i}"]`).textContent = rs||'';
+            document.querySelector(`.ja[data-i="${i}"]`).textContent = ra||'';
+            allB+=rb; allS+=rs; allA+=ra;
+        }
+        for (let g=1; g<=5; g++) {
+            document.getElementById('t'+g+'b').textContent = col.b[g];
+            document.getElementById('t'+g+'s').textContent = col.s[g];
+            document.getElementById('t'+g+'a').textContent = col.a[g];
+        }
+        document.getElementById('tAllB').textContent = allB;
+        document.getElementById('tAllS').textContent = allS;
+        document.getElementById('tAllA').textContent = allA;
+        if (typeof scheduleDraft === 'function') scheduleDraft();
+        return {allB, allS, allA};
+    }
+
+    function tozalaAsosiy() {
+        if (confirm('Tozalaysizmi?')) {
+            document.querySelectorAll('#mainBody input').forEach(e => e.value='');
+            hisoblaAsosiy();
+        }
+    }
+
+    function hisoblaBrak() {
+        const suv = +document.getElementById('bugunSuv').value || 0;
+        const brak = +document.getElementById('brakSoni').value || 0;
+        document.getElementById('yaroqli').textContent = Math.max(0, suv - brak);
+        document.getElementById('brakFoiz').textContent = (suv > 0 ? ((brak/suv)*100).toFixed(1) : 0) + '%';
+    }
+
+    function yaratKomp() {
+        const tbody = document.getElementById('kompBody');
+        tbody.innerHTML = '';
+        for (let i=1; i<=5; i++) {
+            tbody.innerHTML += `<tr>
+                <td class="text-slate-500">${i}</td>
+                <td><input style="text-align:left;padding-left:8px" data-k="${i}" placeholder="Kompaniya" oninput="hisoblaKomp()"></td>
+                <td><input type="number" class="k-b" data-k="${i}" oninput="hisoblaKomp()"></td>
+                <td><input type="number" class="k-s" data-k="${i}" oninput="hisoblaKomp()"></td>
+                <td><input type="number" class="k-o" data-k="${i}" oninput="hisoblaKomp()"></td>
+                <td><input type="number" class="k-p" data-k="${i}" oninput="hisoblaKomp()"></td>
+                <td><input type="number" class="k-l" data-k="${i}" oninput="hisoblaKomp()"></td>
+                <td><input type="date" data-k="${i}"></td>
+                <td><input style="text-align:left;padding-left:8px" placeholder="—"></td>
+            </tr>`;
+        }
+    }
+
+    function hisoblaKomp() {
+        let b=0,s=0,p=0,o=0,q=0;
+        for (let i=1; i<=5; i++) {
+            b += +document.querySelector(`.k-b[data-k="${i}"]`)?.value || 0;
+            s += +document.querySelector(`.k-s[data-k="${i}"]`)?.value || 0;
+            p += +document.querySelector(`.k-p[data-k="${i}"]`)?.value || 0;
+            o += +document.querySelector(`.k-o[data-k="${i}"]`)?.value || 0;
+            q += +document.querySelector(`.k-l[data-k="${i}"]`)?.value || 0;
+        }
+        document.getElementById('kB').textContent = b;
+        document.getElementById('kS').textContent = s;
+        document.getElementById('kP').textContent = p.toLocaleString();
+        document.getElementById('kO').textContent = o;
+        const ql = document.getElementById('Ql');
+        if (ql) ql.textContent = q;
+    }
+
+    // ===== PRIXOD / RASXOD =====
+    let prixodList = [], rasxodList = [];
+    function qoshPrixod() { prixodList.push({nomi:'', summa:0, izoh:''}); chizPrixod(); }
+    function qoshRasxod() { rasxodList.push({nomi:'', summa:0, izoh:''}); chizRasxod(); }
+    function ochirPrixod(i) { prixodList.splice(i,1); chizPrixod(); }
+    function ochirRasxod(i) { rasxodList.splice(i,1); chizRasxod(); }
+
+    function chizPrixod() { scheduleDraft && scheduleDraft();
+        document.getElementById('prixodRows').innerHTML = prixodList.map((p,i) => `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input class="col-span-4" value="${p.nomi}" oninput="prixodList[${i}].nomi=this.value" placeholder="Nomi">
+                <input class="col-span-3" type="number" value="${p.summa||''}" oninput="prixodList[${i}].summa=+this.value;hisoblaPR()" placeholder="0">
+                <input class="col-span-4" value="${p.izoh}" oninput="prixodList[${i}].izoh=this.value" placeholder="Izoh">
+                <button onclick="ochirPrixod(${i})" class="col-span-1 del-btn no-print"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('') || '<div class="text-slate-500 text-xs py-2">—</div>';
+        hisoblaPR();
+    }
+    function chizRasxod() {
+        document.getElementById('rasxodRows').innerHTML = rasxodList.map((p,i) => `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input class="col-span-4" value="${p.nomi}" oninput="rasxodList[${i}].nomi=this.value" placeholder="Nomi">
+                <input class="col-span-3" type="number" value="${p.summa||''}" oninput="rasxodList[${i}].summa=+this.value;hisoblaPR()" placeholder="0">
+                <input class="col-span-4" value="${p.izoh}" oninput="rasxodList[${i}].izoh=this.value" placeholder="Izoh">
+                <button onclick="ochirRasxod(${i})" class="col-span-1 del-btn no-print"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('') || '<div class="text-slate-500 text-xs py-2">—</div>';
+        hisoblaPR();
+    }
+
+    function hisoblaPR() {
+        const jp = prixodList.reduce((a,b)=>a+(b.summa||0),0);
+        const jr = rasxodList.reduce((a,b)=>a+(b.summa||0),0);
+        document.getElementById('jamiPrixod').textContent = jp.toLocaleString();
+        document.getElementById('jamiRasxod').textContent = jr.toLocaleString();
+        const bal = jp - jr;
+        document.getElementById('balansPR').textContent = bal.toLocaleString();
+        document.getElementById('balansPR').className = 'text-xl font-black ' + (bal >= 0 ? 'text-cyan-400' : 'text-rose-400');
+        hisoblaYakuniy();
+    }
+
+    // ===== ISHCHILAR =====
+    function yaratIshchi() {
+        const tbody = document.getElementById('ishchiBody');
+        tbody.innerHTML = '';
+        for (let i=1; i<=8; i++) {
+            tbody.innerHTML += `<tr>
+                <td class="text-slate-500">${i}</td>
+                <td><input style="text-align:left;padding-left:8px" class="i-ism" data-i="${i}" placeholder="Ism" oninput="hisoblaIshchi()"></td>
+                <td><input class="i-lav" data-i="${i}" placeholder="Lavozim" oninput="hisoblaIshchi()"></td>
+                <td><input type="number" class="i-oyl" data-i="${i}" oninput="hisoblaIshchi()"></td>
+                <td><input type="number" class="i-bon" data-i="${i}" oninput="hisoblaIshchi()"></td>
+                <td><input type="number" class="i-jar" data-i="${i}" oninput="hisoblaIshchi()"></td>
+                <td class="font-bold text-emerald-400 i-jami" data-i="${i}">0</td>
+            </tr>`;
+        }
+    }
+
+    function hisoblaIshchi() {
+        let jo=0, jb=0, jj=0, jt=0;
+        for (let i=1; i<=8; i++) {
+            const o = +document.querySelector(`.i-oyl[data-i="${i}"]`)?.value || 0;
+            const b = +document.querySelector(`.i-bon[data-i="${i}"]`)?.value || 0;
+            const j = +document.querySelector(`.i-jar[data-i="${i}"]`)?.value || 0;
+            const t = o + b - j;
+            document.querySelector(`.i-jami[data-i="${i}"]`).textContent = t ? t.toLocaleString() : '';
+            jo+=o; jb+=b; jj+=j; jt+=t;
+        }
+        document.getElementById('jamiOylik').textContent = jo.toLocaleString();
+        document.getElementById('jamiBonus').textContent = jb.toLocaleString();
+        document.getElementById('jamiJarima').textContent = jj.toLocaleString();
+        document.getElementById('jamiIshchi').textContent = jt.toLocaleString();
+        hisoblaYakuniy();
+    }
+
+    // ===== YAKUNIY (notebook formula) =====
+    function hisoblaYakuniy() {
+        const oylik = +document.getElementById('jamiIshchi').textContent.replace(/\s/g,'').replace(/,/g,'') || 0;
+        const jp = prixodList.reduce((a,b)=>a+(b.summa||0),0);
+        const jr = rasxodList.reduce((a,b)=>a+(b.summa||0),0);
+        const balansPR = jp - jr;
+        // Notebook: Jami oylik - (Prixod - Rasxod)
+        const natija = oylik - balansPR;
+        document.getElementById('yakuniyNatija').textContent = natija.toLocaleString();
+        document.getElementById('yakuniyTushuntirish').textContent =
+            oylik.toLocaleString() + ' − ' + balansPR.toLocaleString() + ' = ' + natija.toLocaleString();
+    }
+
+    // // ===== ABET =====
+    // let abetList = [];
+    // function qoshAbet() { abetList.push({nomi:'', summa:0, sana:'', izoh:''}); chizAbet(); }
+    // function ochirAbet(i) { abetList.splice(i,1); chizAbet(); }
+    // function chizAbet() {
+    //     document.getElementById('abetRows').innerHTML = abetList.map((a,i) => `
+    //         <div class="grid grid-cols-12 gap-2 items-center">
+    //             <input class="col-span-3" value="${a.nomi}" oninput="abetList[${i}].nomi=this.value" placeholder="Nomi">
+    //             <input class="col-span-3" type="number" value="${a.summa||''}" oninput="abetList[${i}].summa=+this.value;hisoblaAbet()" placeholder="0">
+    //             <input class="col-span-3" type="date" value="${a.sana}" oninput="abetList[${i}].sana=this.value">
+    //             <input class="col-span-2" value="${a.izoh}" oninput="abetList[${i}].izoh=this.value" placeholder="Izoh">
+    //             <button onclick="ochirAbet(${i})" class="col-span-1 del-btn no-print"><i class="fa-solid fa-xmark"></i></button>
+    //         </div>`).join('') || '<div class="text-slate-500 text-xs py-2">—</div>';
+    //     hisoblaAbet();
+    // }
+    // function hisoblaAbet() {
+    //     document.getElementById('jamiAbet').textContent = abetList.reduce((a,b)=>a+(b.summa||0),0).toLocaleString();
+    // }
+
+    // ===== KUNLIK TARIX =====
+    let tarix = JSON.parse(localStorage.getItem('idealWaterTarix') || '[]');
+    function saqlash() {
+        const asosiy = hisoblaAsosiy();
+        hisoblaKomp();
+        const date = document.getElementById('reportDate').value;
+        if (!date) return alert('Sanani tanlang!');
+        const bugun = +document.getElementById('bugunSuv').value || 0;
+        const brak = +document.getElementById('brakSoni').value || 0;
+        const rec = {
+            date,
+            bosh: asosiy.allB,
+            suv: asosiy.allS,
+            astatka: asosiy.allA,
+            brak: brak,
+            bugunSuv: bugun,
+            yaroqli: Math.max(0, bugun - brak),
+            kompBosh: +document.getElementById('kB').textContent || 0,
+            kompSuv: +document.getElementById('kS').textContent || 0,
+            kompPul: (document.getElementById('kP').textContent || '0').replace(/\s/g,'').replace(/,/g,'') || 0,
+            kompOp: +document.getElementById('kO').textContent || 0,
+            kompQogan: +(document.getElementById('Ql')?.textContent || 0)
+        };
+        const idx = tarix.findIndex(t => t.date === date);
+        if (idx >= 0) tarix[idx] = rec; else tarix.unshift(rec);
+        localStorage.setItem('idealWaterTarix', JSON.stringify(tarix));
+        chizTarix();
+        saveDraft();
+        alert(date + ' kunlik saqlandi!');
+    }
+
+    function chizTarix() {
+        const tbody = document.getElementById('tarixBody');
+        if (!tarix.length) {
+            tbody.innerHTML = `<tr><td colspan="12" class="py-6 text-center text-slate-500">${dict[currentLang].tarixEmpty}</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = tarix.map((t,i) => `
+            <tr>
+                <td class="text-blue-300 font-semibold">${t.date}</td>
+                <td>${t.bosh||0}</td>
+                <td>${t.suv||0}</td>
+                <td>${t.astatka||0}</td>
+                <td class="text-rose-400">${t.brak||0}</td>
+                <td class="text-cyan-400">${t.bugunSuv||0}</td>
+                <td>${t.kompBosh||0}</td>
+                <td>${t.kompSuv||0}</td>
+                <td>${t.kompOp||0}</td>
+                <td class="text-emerald-400">${Number(t.kompPul||0).toLocaleString()}</td>
+                <td>${t.kompQogan||0}</td><td><button onclick="ochirTarix(${i})" class="del-btn"><i class="fa-solid fa-xmark"></i></button></td>
+            </tr>`).join('');
+    }
+    function ochirTarix(i) {
+        if (confirm('O‘chirasizmi?')) { tarix.splice(i,1); localStorage.setItem('idealWaterTarix', JSON.stringify(tarix)); chizTarix(); }
+    }
+    function tozalaTarix() {
+        if (confirm('Barcha kunlik tarixni o‘chirasizmi?')) { tarix=[]; localStorage.removeItem('idealWaterTarix'); chizTarix(); }
+    }
+
+    // ===== OYLIK TARIX (alohida) =====
+    let oylikTarix = JSON.parse(localStorage.getItem('idealWaterOylikTarix') || '[]');
+    function saqlashOylik() {
+        const date = document.getElementById('reportDate').value;
+        if (!date) return alert('Sanani tanlang!');
+        hisoblaPR(); hisoblaIshchi(); hisoblaYakuniy();
+        const jp = prixodList.reduce((a,b)=>a+(b.summa||0),0);
+        const jr = rasxodList.reduce((a,b)=>a+(b.summa||0),0);
+        const balansPR = jp - jr;
+        const oylik = +String(document.getElementById('jamiIshchi').textContent).replace(/\s/g,'').replace(/,/g,'') || 0;
+        const rec = {
+            date,
+            prixod: jp,
+            rasxod: jr,
+            balansPR: balansPR,
+            oylik: oylik,
+            yakuniy: oylik - balansPR
+        };
+        const idx = oylikTarix.findIndex(t => t.date === date);
+        if (idx >= 0) oylikTarix[idx] = rec; else oylikTarix.unshift(rec);
+        localStorage.setItem('idealWaterOylikTarix', JSON.stringify(oylikTarix));
+        chizOylikTarix();
+        alert(date + ' oylik saqlandi!');
+    }
+    function chizOylikTarix() {
+        const tbody = document.getElementById('oylikTarixBody');
+        if (!tbody) return;
+        if (!oylikTarix.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">Hali yozuv yo‘q</td></tr>';
+            return;
+        }
+        tbody.innerHTML = oylikTarix.map((t,i) => `
+            <tr>
+                <td class="text-blue-300 font-semibold">${t.date}</td>
+                <td class="text-emerald-400">${Number(t.prixod||0).toLocaleString()}</td>
+                <td class="text-rose-400">${Number(t.rasxod||0).toLocaleString()}</td>
+                <td class="text-cyan-400">${Number(t.balansPR||0).toLocaleString()}</td>
+                <td>${Number(t.oylik||0).toLocaleString()}</td>
+                <td class="font-bold text-emerald-300">${Number(t.yakuniy||0).toLocaleString()}</td>
+                <td><button onclick="ochirOylikTarix(${i})" class="del-btn"><i class="fa-solid fa-xmark"></i></button></td>
+            </tr>`).join('');
+    }
+    function ochirOylikTarix(i) {
+        if (confirm('O‘chirasizmi?')) {
+            oylikTarix.splice(i,1);
+            localStorage.setItem('idealWaterOylikTarix', JSON.stringify(oylikTarix));
+            chizOylikTarix();
+        }
+    }
+    function tozalaOylikTarix() {
+        if (confirm('Barcha oylik tarixni o‘chirasizmi?')) {
+            oylikTarix = [];
+            localStorage.removeItem('idealWaterOylikTarix');
+            chizOylikTarix();
+        }
+    }
+
+
+    // ===== AVTO-SAQLASH (F5 / telefon qayta yuklashda saqlanadi) =====
+    const DRAFT_KEY = 'idealWaterDraft';
+
+    function collectDraft() {
+        const draft = {
+            date: document.getElementById('reportDate')?.value || '',
+            bugunSuv: document.getElementById('bugunSuv')?.value || '',
+            brakSoni: document.getElementById('brakSoni')?.value || '',
+            mashina: [],
+            komp: [],
+            ishchi: [],
+            prixod: prixodList,
+            rasxod: rasxodList
+        };
+        // Mashinalar
+        for (let i = 1; i <= 20; i++) {
+            const row = { m: document.querySelector(`.mashina[data-i="${i}"]`)?.value || '' };
+            for (let g = 1; g <= 5; g++) {
+                row['b'+g] = document.querySelector(`.b${g}[data-i="${i}"]`)?.value || '';
+                row['s'+g] = document.querySelector(`.s${g}[data-i="${i}"]`)?.value || '';
+                row['a'+g] = document.querySelector(`.a${g}[data-i="${i}"]`)?.value || '';
+            }
+            draft.mashina.push(row);
+        }
+        // Kompaniyalar
+        for (let i = 1; i <= 5; i++) {
+            const tr = document.querySelectorAll('#kompBody tr')[i-1];
+            const inputs = tr ? tr.querySelectorAll('input') : [];
+            draft.komp.push({
+                nomi: inputs[0]?.value || '',
+                b: document.querySelector(`.k-b[data-k="${i}"]`)?.value || '',
+                s: document.querySelector(`.k-s[data-k="${i}"]`)?.value || '',
+                o: document.querySelector(`.k-o[data-k="${i}"]`)?.value || '',
+                p: document.querySelector(`.k-p[data-k="${i}"]`)?.value || '',
+                l: document.querySelector(`.k-l[data-k="${i}"]`)?.value || '',
+                sana: inputs[6]?.value || '',
+                izoh: inputs[7]?.value || ''
+            });
+        }
+        // Ishchilar
+        for (let i = 1; i <= 8; i++) {
+            draft.ishchi.push({
+                ism: document.querySelector(`.i-ism[data-i="${i}"]`)?.value || '',
+                lav: document.querySelector(`.i-lav[data-i="${i}"]`)?.value || '',
+                oyl: document.querySelector(`.i-oyl[data-i="${i}"]`)?.value || '',
+                bon: document.querySelector(`.i-bon[data-i="${i}"]`)?.value || '',
+                jar: document.querySelector(`.i-jar[data-i="${i}"]`)?.value || ''
+            });
+        }
+        return draft;
+    }
+
+    function saveDraft() {
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(collectDraft()));
+        } catch (e) {}
+    }
+
+    function loadDraft() {
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return false;
+            const d = JSON.parse(raw);
+            if (d.date) document.getElementById('reportDate').value = d.date;
+            if (d.bugunSuv != null) document.getElementById('bugunSuv').value = d.bugunSuv;
+            if (d.brakSoni != null) document.getElementById('brakSoni').value = d.brakSoni;
+            // Mashina
+            (d.mashina || []).forEach((row, idx) => {
+                const i = idx + 1;
+                const m = document.querySelector(`.mashina[data-i="${i}"]`);
+                if (m) m.value = row.m || '';
+                for (let g = 1; g <= 5; g++) {
+                    const b = document.querySelector(`.b${g}[data-i="${i}"]`);
+                    const s = document.querySelector(`.s${g}[data-i="${i}"]`);
+                    const a = document.querySelector(`.a${g}[data-i="${i}"]`);
+                    if (b) b.value = row['b'+g] || '';
+                    if (s) s.value = row['s'+g] || '';
+                    if (a) a.value = row['a'+g] || '';
+                }
+            });
+            // Kompaniya
+            (d.komp || []).forEach((row, idx) => {
+                const i = idx + 1;
+                const tr = document.querySelectorAll('#kompBody tr')[idx];
+                if (!tr) return;
+                const inputs = tr.querySelectorAll('input');
+                if (inputs[0]) inputs[0].value = row.nomi || '';
+                const kb = document.querySelector(`.k-b[data-k="${i}"]`);
+                const ks = document.querySelector(`.k-s[data-k="${i}"]`);
+                const ko = document.querySelector(`.k-o[data-k="${i}"]`);
+                const kp = document.querySelector(`.k-p[data-k="${i}"]`);
+                const kl = document.querySelector(`.k-l[data-k="${i}"]`);
+                if (kb) kb.value = row.b || '';
+                if (ks) ks.value = row.s || '';
+                if (ko) ko.value = row.o || '';
+                if (kp) kp.value = row.p || '';
+                if (kl) kl.value = row.l || '';
+                if (inputs[6]) inputs[6].value = row.sana || '';
+                if (inputs[7]) inputs[7].value = row.izoh || '';
+            });
+            // Ishchilar
+            (d.ishchi || []).forEach((row, idx) => {
+                const i = idx + 1;
+                const ism = document.querySelector(`.i-ism[data-i="${i}"]`);
+                const lav = document.querySelector(`.i-lav[data-i="${i}"]`);
+                const oyl = document.querySelector(`.i-oyl[data-i="${i}"]`);
+                const bon = document.querySelector(`.i-bon[data-i="${i}"]`);
+                const jar = document.querySelector(`.i-jar[data-i="${i}"]`);
+                if (ism) ism.value = row.ism || '';
+                if (lav) lav.value = row.lav || '';
+                if (oyl) oyl.value = row.oyl || '';
+                if (bon) bon.value = row.bon || '';
+                if (jar) jar.value = row.jar || '';
+            });
+            // Prixod / Rasxod
+            if (Array.isArray(d.prixod) && d.prixod.length) {
+                prixodList = d.prixod;
+                chizPrixod();
+            }
+            if (Array.isArray(d.rasxod) && d.rasxod.length) {
+                rasxodList = d.rasxod;
+                chizRasxod();
+            }
+            hisoblaAsosiy();
+            hisoblaKomp();
+            hisoblaBrak();
+            hisoblaIshchi();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function clearDraftAndForm() {
+        // Kunlik forma tozalash (PDF dan keyin)
+        document.querySelectorAll('#mainBody input').forEach(e => e.value = '');
+        document.querySelectorAll('#kompBody input').forEach(e => { e.value = ''; });
+        document.getElementById('bugunSuv').value = '';
+        document.getElementById('brakSoni').value = '';
+        hisoblaAsosiy();
+        hisoblaKomp();
+        hisoblaBrak();
+        saveDraft();
+    }
+
+    function clearOylikForm() {
+        // Oylik forma tozalash (PDF dan keyin)
+        document.querySelectorAll('#ishchiBody input').forEach(e => e.value = '');
+        prixodList = [];
+        rasxodList = [];
+        qoshPrixod(); qoshPrixod();
+        qoshRasxod(); qoshRasxod();
+        hisoblaIshchi();
+        hisoblaPR();
+        hisoblaYakuniy();
+        saveDraft();
+    }
+
+    // Har qanday o'zgarishda avto-saqlash
+    let draftTimer = null;
+    function scheduleDraft() {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(saveDraft, 300);
+    }
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('input, select, textarea')) scheduleDraft();
+    });
+
+
+
+    // ===== PDF: barcha brauzerda sonlar markazda (Edge/Chrome/Firefox) =====
+    // Input o'rniga matn qo'yiladi — text-align print da ishonchsiz
+    function preparePrintText() {
+        document.querySelectorAll('.print-val').forEach(function(n) { n.remove(); });
+        var root = document.querySelector('.page.print-show');
+        if (!root) root = document;
+        root.querySelectorAll('input').forEach(function(inp) {
+            var span = document.createElement('span');
+            // Grid ustunlari saqlansin (col-span-4, col-span-3, ...)
+            span.className = 'print-val ' + (inp.className || '');
+            var v = (inp.value || '').trim();
+            span.textContent = v;
+            var isStat = inp.classList.contains('stat-num') || inp.id === 'bugunSuv' || inp.id === 'brakSoni';
+            var fs = isStat ? '16px' : '8px';
+            var fw = isStat ? '800' : '600';
+            span.setAttribute('style',
+                'display:block;width:100%;text-align:center !important;color:#000 !important;' +
+                'font-size:' + fs + ';line-height:1.35;padding:3px 4px;background:transparent !important;' +
+                'font-family:inherit;font-weight:' + fw + ';box-sizing:border-box;'
+            );
+            inp.setAttribute('data-print-hidden', '1');
+            inp.style.setProperty('display', 'none', 'important');
+            if (inp.parentNode) inp.parentNode.insertBefore(span, inp);
+        });
+        // Qo'shish tugmalarini print da yashirish (class orqali — restore ishonchli)
+        root.querySelectorAll('button').forEach(function(b) {
+            if (b.classList.contains('no-print') || b.classList.contains('del-btn')) {
+                b.classList.add('print-hide-btn');
+            }
+        });
+        root.querySelectorAll('td, th').forEach(function(cell) {
+            cell.style.setProperty('text-align', 'center', 'important');
+            cell.style.setProperty('vertical-align', 'middle', 'important');
+        });
+    }
+    function restoreAfterPrint() {
+        document.querySelectorAll('.print-val').forEach(function(n) { n.remove(); });
+        document.querySelectorAll('input').forEach(function(inp) {
+            inp.style.removeProperty('display');
+            inp.removeAttribute('data-print-hidden');
+        });
+        // + Qo'shish va boshqa tugmalar qayta chiqsin
+        document.querySelectorAll('button').forEach(function(b) {
+            b.style.removeProperty('display');
+            b.classList.remove('print-hide-btn');
+        });
+        document.querySelectorAll('td, th').forEach(function(cell) {
+            cell.style.removeProperty('text-align');
+            cell.style.removeProperty('vertical-align');
+        });
+    }
+    window.addEventListener('beforeprint', preparePrintText);
+    window.addEventListener('afterprint', restoreAfterPrint);
+
+    // printKunlik / printOylik ichida ham chaqiramiz (Edge ba'zan beforeprint kechikadi)
+
+    window.onload = () => {
+        // Real sana avtomatik
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const dd = String(now.getDate()).padStart(2,'0');
+        document.getElementById('reportDate').value = yyyy + '-' + mm + '-' + dd;
+
+        yaratAsosiy(); yaratKomp(); yaratIshchi();
+        qoshPrixod(); qoshPrixod();
+        qoshRasxod(); qoshRasxod();
+        chizTarix();
+        chizOylikTarix();
+        hisoblaAsosiy(); hisoblaKomp(); hisoblaIshchi();
+        setLang('uz');
+
+        // F5 / telefon qayta yuklashda draftni tiklash
+        const restored = loadDraft();
+        if (restored) {
+            // draft bor — qayta hisoblash
+            hisoblaAsosiy(); hisoblaKomp(); hisoblaBrak(); hisoblaIshchi();
+        }
+    };
+</script>
+
+<!-- Custom clear modal -->
+<div id="clearModal" class="app-modal-overlay no-print" onclick="if(event.target===this)closeClearModal(false)">
+    <div class="app-modal" role="dialog" aria-modal="true">
+        <div class="app-modal-head">
+            <div class="app-modal-icon"><i class="fa-solid fa-file-pdf"></i></div>
+            <div>
+                <h3 class="app-modal-title" id="clearModalTitle">PDF chiqarildi</h3>
+                <p class="app-modal-text" id="clearModalText">Formani tozalaymizmi? Ma’lumotlar o‘chib ketadi.</p>
+            </div>
+        </div>
+        <div class="app-modal-actions">
+            <button type="button" class="btn-modal-no" onclick="closeClearModal(false)">Yo‘q, qoldir</button>
+            <button type="button" class="btn-modal-yes" onclick="closeClearModal(true)">Ha, tozala</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
