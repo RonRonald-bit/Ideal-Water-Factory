@@ -584,9 +584,9 @@
         <div class="flex items-center gap-1.5 flex-wrap">
             <div class="flex gap-1">
                 <button class="lang-btn active" data-lang="uz" onclick="setLang('uz')">UZ</button>
-                <button class="lang-btn" data-lang="kr" onclick="setLang('kr')">КР</button>
                 <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
-                <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+                <!-- <button class="lang-btn" data-lang="kr" onclick="setLang('kr')">КР</button> -->
+                <!-- <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button> -->
             </div>
             <input type="date" id="reportDate" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white" style="width:140px;min-height:40px">
             <button onclick="saqlash()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-2 rounded-lg">
@@ -910,15 +910,15 @@
             titleIshchi:'Ishchilar oyligi', thIsm:'Ism', thLavozim:'Lavozim', thOylik:'Oylik', thBonus:'Bonus', thJarima:'Jarima',
             titleAbet:'Abet va boshqa xarajatlar', lblJamiAbet:'Jami abet:',
             lblYakuniy:'Yakuniy natija', lblFormula:'Jami oylik − (Prixod − Rasxod)' },
-        kr: { btnSave:'Кунлик сақлаш', navAsosiy:'Кунлик ҳисобот', navOylik:'Ойлик ҳисобот', btnPdfKunlik:'Кунлик PDF', btnPdfOylik:'Ойлик PDF',
-            titleMashina:'Машиналар ҳисоби', btnTozala:'Тозалаш', thMashina:'Машина',
-            lblBugunSuv:'Бугун қуйилган сув', lblBrak:'Брак', lblYaroqli:'Яроқли', lblBrakFoiz:'Брак %',
-            titleKomp:'Бошқа компанияларга сув', thKomp:'Компания', thKBosh:'Бўш', thKSuv:'Сув', thKPul:'Пул бергани', thKOp:'Оп кетгани', thKSana:'Сана', thKIzoh:'Изоҳ',
-            titleTarix:'Тарих', btnTarixTozala:'Тозалаш', tarixEmpty:'Ҳали ёзув йўқ',
-            titlePrixod:'Приход', titleRasxod:'Расход', lblJamiPrixod:'Жами Приход:', lblJamiRasxod:'Жами Расход:', lblBalansPR:'Приход − Расход:',
-            titleIshchi:'Ишчилар ойлиги', thIsm:'Исм', thLavozim:'Лавозим', thOylik:'Ойлик', thBonus:'Бонус', thJarima:'Жарима',
-            titleAbet:'Абет ва бошқа харажатлар', lblJamiAbet:'Жами абет:',
-            lblYakuniy:'Якуний натижа', lblFormula:'Жами ойлик − (Приход − Расход)' },
+        // kr: { btnSave:'Кунлик сақлаш', navAsosiy:'Кунлик ҳисобот', navOylik:'Ойлик ҳисобот', btnPdfKunlik:'Кунлик PDF', btnPdfOylik:'Ойлик PDF',
+        //     titleMashina:'Машиналар ҳисоби', btnTozala:'Тозалаш', thMashina:'Машина',
+        //     lblBugunSuv:'Бугун қуйилган сув', lblBrak:'Брак', lblYaroqli:'Яроқли', lblBrakFoiz:'Брак %',
+        //     titleKomp:'Бошқа компанияларга сув', thKomp:'Компания', thKBosh:'Бўш', thKSuv:'Сув', thKPul:'Пул бергани', thKOp:'Оп кетгани', thKSana:'Сана', thKIzoh:'Изоҳ',
+        //     titleTarix:'Тарих', btnTarixTozala:'Тозалаш', tarixEmpty:'Ҳали ёзув йўқ',
+        //     titlePrixod:'Приход', titleRasxod:'Расход', lblJamiPrixod:'Жами Приход:', lblJamiRasxod:'Жами Расход:', lblBalansPR:'Приход − Расход:',
+        //     titleIshchi:'Ишчилар ойлиги', thIsm:'Исм', thLavozim:'Лавозим', thOylik:'Ойлик', thBonus:'Бонус', thJarima:'Жарима',
+        //     titleAbet:'Абет ва бошқа харажатлар', lblJamiAbet:'Жами абет:',
+        //     lblYakuniy:'Якуний натижа', lblFormula:'Жами ойлик − (Приход − Расход)' },
         ru: { btnSave:'Дневной сохранить', navAsosiy:'Дневной отчёт', navOylik:'Месячный отчёт', btnPdfKunlik:'Дневной PDF', btnPdfOylik:'Месячный PDF',
             titleMashina:'Учёт машин', btnTozala:'Очистить', thMashina:'Машина',
             lblBugunSuv:'Залито сегодня', lblBrak:'Брак', lblYaroqli:'Годное', lblBrakFoiz:'% брака',
@@ -928,15 +928,15 @@
             titleIshchi:'Зарплата', thIsm:'Имя', thLavozim:'Должность', thOylik:'Оклад', thBonus:'Бонус', thJarima:'Штраф',
             titleAbet:'Обед и расходы', lblJamiAbet:'Итого обед:',
             lblYakuniy:'Итоговый результат', lblFormula:'Зарплата − (Приход − Расход)' },
-        en: { btnSave:'Daily save', navAsosiy:'Daily Report', navOylik:'Monthly Report', btnPdfKunlik:'Daily PDF', btnPdfOylik:'Monthly PDF',
-            titleMashina:'Machine report', btnTozala:'Clear', thMashina:'Machine',
-            lblBugunSuv:'Filled today', lblBrak:'Defects', lblYaroqli:'Valid', lblBrakFoiz:'Defect %',
-            titleKomp:'Water to companies', thKomp:'Company', thKBosh:'Empty', thKSuv:'Water', thKPul:'Paid', thKOp:'Taken', thKSana:'Date', thKIzoh:'Note',
-            titleTarix:'History', btnTarixTozala:'Clear', tarixEmpty:'No records',
-            titlePrixod:'Income', titleRasxod:'Expense', lblJamiPrixod:'Total Income:', lblJamiRasxod:'Total Expense:', lblBalansPR:'Income − Expense:',
-            titleIshchi:'Workers salary', thIsm:'Name', thLavozim:'Position', thOylik:'Salary', thBonus:'Bonus', thJarima:'Fine',
-            titleAbet:'Lunch & expenses', lblJamiAbet:'Total lunch:',
-            lblYakuniy:'Final result', lblFormula:'Salary − (Income − Expense)' }
+        // en: { btnSave:'Daily save', navAsosiy:'Daily Report', navOylik:'Monthly Report', btnPdfKunlik:'Daily PDF', btnPdfOylik:'Monthly PDF',
+        //     titleMashina:'Machine report', btnTozala:'Clear', thMashina:'Machine',
+        //     lblBugunSuv:'Filled today', lblBrak:'Defects', lblYaroqli:'Valid', lblBrakFoiz:'Defect %',
+        //     titleKomp:'Water to companies', thKomp:'Company', thKBosh:'Empty', thKSuv:'Water', thKPul:'Paid', thKOp:'Taken', thKSana:'Date', thKIzoh:'Note',
+        //     titleTarix:'History', btnTarixTozala:'Clear', tarixEmpty:'No records',
+        //     titlePrixod:'Income', titleRasxod:'Expense', lblJamiPrixod:'Total Income:', lblJamiRasxod:'Total Expense:', lblBalansPR:'Income − Expense:',
+        //     titleIshchi:'Workers salary', thIsm:'Name', thLavozim:'Position', thOylik:'Salary', thBonus:'Bonus', thJarima:'Fine',
+        //     titleAbet:'Lunch & expenses', lblJamiAbet:'Total lunch:',
+        //     lblYakuniy:'Final result', lblFormula:'Salary − (Income − Expense)' }
     };
     let currentLang = 'uz';
     function setLang(lang) {
