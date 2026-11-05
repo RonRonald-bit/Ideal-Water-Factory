@@ -1,4 +1,5 @@
-const CACHE = 'ideal-water-v3';
+/* Ideal-Water SW — HTML doim tarmoqdan (yangi kod), offline da cache */
+const CACHE = 'ideal-water-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -8,9 +9,12 @@ const ASSETS = [
   './apple-touch-icon.png',
   './manifest.webmanifest'
 ];
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS).catch(() => {})));
 });
+
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
@@ -18,8 +22,59 @@ self.addEventListener('activate', (e) => {
     ).then(() => self.clients.claim())
   );
 });
+
 self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+  const isHTML =
+    req.mode === 'navigate' ||
+    req.destination === 'document' ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('/ideal-factory') ||
+    url.pathname.endsWith('/ideal-factory/');
+
+  // index.html va sahifa — AVVAL tarmoq (yangilanish darhol)
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() =>
+          caches.match(req).then((r) => r || caches.match('./index.html'))
+        )
+    );
+    return;
+  }
+
+  // sw.js o'zi — doim tarmoq
+  if (url.pathname.endsWith('sw.js')) {
+    e.respondWith(fetch(req));
+    return;
+  }
+
+  // qolgan fayllar — cache, keyin tarmoq
   e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request).catch(() => caches.match('./index.html')))
+    caches.match(req).then((cached) => {
+      const net = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || net;
+    })
   );
+});
+
+self.addEventListener('message', (e) => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
