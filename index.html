@@ -2405,9 +2405,6 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
           <label class="role-opt" data-role="viewer" onclick="pickRegRole(this)">
             <input type="radio" name="regRole" value="viewer"> Kuzatuvchi
           </label>
-          <label class="role-opt" data-role="admin" onclick="pickRegRole(this)">
-            <input type="radio" name="regRole" value="admin"> Admin
-          </label>
         </div>
       </div>
       <div class="auth-field" id="regWatchWrap" style="display:none">
@@ -2477,9 +2474,6 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         </button>
         <button class="nav-btn" data-page="oylik" onclick="showPage('oylik')">
             <i class="fa-solid fa-calendar mr-1"></i> <span id="navOylik">Oylik hisobot</span>
-        </button>
-        <button class="nav-btn no-print" data-page="admin" id="navAdminBtn" onclick="showPage('admin')" style="display:none">
-            <i class="fa-solid fa-shield-halved mr-1"></i> Admin
         </button>
         <button class="nav-btn" data-page="litr" onclick="showPage('litr')">
             <i class="fa-solid fa-bottle-water mr-1"></i> <span id="navLitr">5–10 L</span>
@@ -4564,7 +4558,6 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         var c = document.querySelector('#regRoleRow input[name="regRole"]:checked');
         if (!c) return 'worker';
         if (c.value === 'viewer') return 'viewer';
-        if (c.value === 'admin') return 'admin';
         return 'worker';
     }
     function applyRoleUI(role, name) {
@@ -4664,7 +4657,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
                     if (!document.querySelector('#mainBody tr') && typeof yaratAsosiy==='function') yaratAsosiy();
                     if (typeof hisoblaAsosiy==='function') hisoblaAsosiy();
                 } catch(e){}
-                if (r === 'admin' && typeof adminRefresh === 'function') adminRefresh();
+                
             };
             if (firebaseReady) pullCloudData().then(go); else setTimeout(go, 150);
         }
@@ -4991,25 +4984,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
 
 
 
-    <div id="page-admin" class="page no-print">
-        <div class="card p-4 mb-4">
-            <h2 class="font-bold text-lg mb-2"><i class="fa-solid fa-shield-halved text-amber-400 mr-2"></i>Admin panel</h2>
-            <p class="text-sm text-slate-400 mb-3">Foydalanuvchilar va bog‘lanishlar</p>
-            <button type="button" onclick="adminRefresh()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-2 rounded-lg mb-3">Yangilash</button>
-            <div class="scroll-x">
-                <table style="min-width:640px">
-                    <thead><tr><th>Login</th><th>Ism</th><th>Rol</th><th>Kuzatadi</th><th>Yaratilgan</th></tr></thead>
-                    <tbody id="adminUsersBody"></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card p-4">
-            <h3 class="font-semibold text-sm mb-2">Cloud foydalanuvchilar</h3>
-            <div id="adminOnlineBody" class="text-sm text-slate-300">—</div>
-        </div>
-    </div>
-
-<!-- Oylik tarix to'liq oynasi -->
+    <!-- Oylik tarix to'liq oynasi -->
 <div id="oylikTarixModal" class="app-modal-overlay no-print" onclick="if(event.target===this)yopOylikTarixModal()">
     <div class="app-modal" role="dialog" style="max-width:800px;width:95%" onclick="event.stopPropagation()">
         <div class="app-modal-head" style="border-bottom:1px solid #1f2937;padding-bottom:12px">
