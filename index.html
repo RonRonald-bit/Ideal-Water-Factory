@@ -2363,6 +2363,12 @@ html body:not(.theme-light) select {
 }
 </style>
 
+<style>
+body.role-admin #navAdminBtn { display: inline-flex !important; }
+body:not(.role-admin) #navAdminBtn { display: none !important; }
+#navAdminBtn { border: 1px solid rgba(251,191,36,0.4); color: #fbbf24; }
+#navAdminBtn.active { background: #b45309; color: #fff; }
+</style>
 </head>
 <body>
 
@@ -2382,6 +2388,10 @@ html body:not(.theme-light) select {
         <input type="text" id="loginUser" autocomplete="username" placeholder="Login"></div>
       <div class="auth-field"><label>Parol</label>
         <input type="password" id="loginPass" autocomplete="current-password" placeholder="Parol"></div>
+      <div class="auth-field" id="loginWatchWrap">
+        <label>Ishchi login (faqat kuzatuvchi)</label>
+        <input type="text" id="loginWatchUser" placeholder="Kuzatiladigan ishchi logini">
+      </div>
       <button type="button" class="auth-btn" id="btnDoLogin" onclick="doLogin()">Kirish</button>
     </div>
     <div id="authRegister" class="auth-panel">
@@ -2395,7 +2405,14 @@ html body:not(.theme-light) select {
           <label class="role-opt" data-role="viewer" onclick="pickRegRole(this)">
             <input type="radio" name="regRole" value="viewer"> Kuzatuvchi
           </label>
+          <label class="role-opt" data-role="admin" onclick="pickRegRole(this)">
+            <input type="radio" name="regRole" value="admin"> Admin
+          </label>
         </div>
+      </div>
+      <div class="auth-field" id="regWatchWrap" style="display:none">
+        <label>Qaysi ishchi (login)</label>
+        <input type="text" id="regWatchUser" placeholder="Ishchi logini">
       </div>
       <div class="auth-field"><label>Login</label>
         <input type="text" id="regUser" autocomplete="username" placeholder="Yangi login"></div>
@@ -2460,6 +2477,9 @@ html body:not(.theme-light) select {
         </button>
         <button class="nav-btn" data-page="oylik" onclick="showPage('oylik')">
             <i class="fa-solid fa-calendar mr-1"></i> <span id="navOylik">Oylik hisobot</span>
+        </button>
+        <button class="nav-btn no-print" data-page="admin" id="navAdminBtn" onclick="showPage('admin')" style="display:none">
+            <i class="fa-solid fa-shield-halved mr-1"></i> Admin
         </button>
         <button class="nav-btn" data-page="litr" onclick="showPage('litr')">
             <i class="fa-solid fa-bottle-water mr-1"></i> <span id="navLitr">5–10 L</span>
@@ -3026,6 +3046,8 @@ html body:not(.theme-light) select {
     }
 
     function showPage(id) {
+        if (id === 'admin' && typeof adminRefresh === 'function') adminRefresh();
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         const page = document.getElementById('page-' + id);
@@ -4394,10 +4416,12 @@ html body:not(.theme-light) select {
     }
     function applyLocalData(data) {
         if (!data) return;
+        window.__idealCloudApplying = true;
         DATA_KEYS.forEach(function(k) {
             if (data[k] == null) return;
             try { localStorage.setItem(k, JSON.stringify(data[k])); } catch(e){}
         });
+        window.__idealCloudApplying = false;
         // UI yangilash — mavjud funksiyalar
         try {
             if (typeof tarix !== 'undefined') tarix = JSON.parse(localStorage.getItem('idealWaterTarix')||'[]');
@@ -4414,31 +4438,114 @@ html body:not(.theme-light) select {
             if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy();
         } catch(e) { console.warn(e); }
     }
+    function workerKeyForSync() {
+        var sess = getSession();
+        if (!sess) return null;
+        if (sess.role === 'viewer') return (sess.watchUser || '').toLowerCase() || null;
+        return (sess.user || '').toLowerCase() || null;
+    }
+    function workerStateRef(login) {
+        if (!firebaseReady || !firebaseDb || !login) return null;
+        return firebaseDb.collection('factory').doc('workers').collection('u').doc(String(login).toLowerCase());
+    }
     function pushCloudData() {
         if (!firebaseReady || !firebaseAuth || !firebaseDb || !firebaseAuth.currentUser) return;
-        firebaseDb.collection('factory').doc('ideal-water')
-            .set(collectLocalData(), { merge: true }).catch(function(e){ console.warn(e); });
+        var sess = getSession();
+        if (!sess || sess.role === 'viewer') return;
+        var key = workerKeyForSync();
+        if (!key) return;
+        var ref = workerStateRef(key);
+        if (!ref) return;
+        var payload = collectLocalData();
+        payload.owner = key;
+        payload.updatedBy = sess.user;
+        ref.set(payload, { merge: true }).catch(function(e){ console.warn(e); });
     }
     function scheduleCloudSync() {
         if (!firebaseReady || !isLoggedIn()) return;
+        var sess = getSession();
+        if (sess && sess.role === 'viewer') return;
         clearTimeout(cloudSyncTimer);
-        cloudSyncTimer = setTimeout(pushCloudData, 1000);
+        cloudSyncTimer = setTimeout(pushCloudData, 250);
+    }
+    var cloudUnsub = null;
+    function stopCloudListen() {
+        if (typeof cloudUnsub === 'function') { try { cloudUnsub(); } catch(e){} }
+        cloudUnsub = null;
+    }
+    function startCloudListen() {
+        stopCloudListen();
+        if (!firebaseReady || !firebaseDb || !isLoggedIn()) return;
+        var key = workerKeyForSync();
+        if (!key) return;
+        var ref = workerStateRef(key);
+        if (!ref) return;
+        cloudUnsub = ref.onSnapshot(function(snap) {
+            if (!snap.exists) return;
+            applyLocalData(snap.data());
+        }, function(err){ console.warn(err); });
     }
     function pullCloudData() {
         return new Promise(function(resolve) {
-            if (!firebaseReady || !firebaseAuth || !firebaseDb || !firebaseAuth.currentUser) { resolve(false); return; }
-            firebaseDb.collection('factory').doc('ideal-water').get()
-                .then(function(snap) {
-                    if (snap.exists) { applyLocalData(snap.data()); resolve(true); }
-                    else { pushCloudData(); resolve(false); }
-                }).catch(function(){ resolve(false); });
+            if (!firebaseReady || !firebaseDb || !isLoggedIn()) { resolve(false); return; }
+            var key = workerKeyForSync();
+            if (!key) { resolve(false); return; }
+            var ref = workerStateRef(key);
+            if (!ref) { resolve(false); return; }
+            ref.get().then(function(snap) {
+                if (snap.exists) { applyLocalData(snap.data()); resolve(true); }
+                else {
+                    var sess = getSession();
+                    if (sess && sess.role !== 'viewer') pushCloudData();
+                    resolve(false);
+                }
+            }).catch(function(){ resolve(false); });
         });
     }
+    function publishUserMeta(uo) {
+        if (!firebaseReady || !firebaseDb || !uo || !uo.user) return;
+        firebaseDb.collection('factory').doc('meta').collection('users').doc(uo.user)
+            .set({
+                user: uo.user, name: uo.name||uo.user, role: uo.role||'worker',
+                watchUser: uo.watchUser||'', created: uo.created||'', updatedAt: Date.now()
+            }, { merge: true }).catch(function(){});
+    }
+    function adminRefresh() {
+        var tbody = document.getElementById('adminUsersBody');
+        if (tbody) {
+            var users = getAuthUsers();
+            var rows = Object.keys(users).map(function(k){
+                var u = users[k]||{};
+                return '<tr><td>'+(u.user||k)+'</td><td>'+(u.name||'—')+'</td><td>'+(u.role||'worker')+'</td><td>'+(u.watchUser||'—')+'</td><td>'+String(u.created||'—').slice(0,19)+'</td></tr>';
+            }).join('');
+            tbody.innerHTML = rows || '<tr><td colspan="5">Bo‘sh</td></tr>';
+        }
+        var online = document.getElementById('adminOnlineBody');
+        if (online && firebaseReady && firebaseDb) {
+            online.textContent = '...';
+            firebaseDb.collection('factory').doc('meta').collection('users').get()
+                .then(function(snap){
+                    var lines=[];
+                    snap.forEach(function(doc){ var d=doc.data()||{}; lines.push((d.role||'?')+': '+(d.name||d.user)+(d.watchUser?(' → '+d.watchUser):'')); });
+                    online.innerHTML = lines.length ? lines.map(function(x){return '<div>'+x+'</div>';}).join('') : '—';
+                }).catch(function(){ online.textContent='Cloud o‘qilmadi'; });
+        }
+    }
+    document.addEventListener('input', function(e) {
+        if (!isLoggedIn()) return;
+        var sess = getSession();
+        if (!sess || sess.role === 'viewer') return;
+        var t = e.target;
+        if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && t.tagName !== 'TEXTAREA')) return;
+        if (t.closest && t.closest('#authScreen')) return;
+        scheduleCloudSync();
+    }, true);
     // localStorage yozilganda cloudga ham (mavjud kodni o'zgartirmasdan)
     (function() {
         var _set = localStorage.setItem.bind(localStorage);
         localStorage.setItem = function(k, v) {
             _set(k, v);
+            if (window.__idealCloudApplying) return;
             if (DATA_KEYS.indexOf(k) >= 0) scheduleCloudSync();
         };
     })();
@@ -4449,28 +4556,38 @@ html body:not(.theme-light) select {
         el.classList.add('active');
         var inp = el.querySelector('input');
         if (inp) inp.checked = true;
+        var role = getSelectedRegRole();
+        var rw = document.getElementById('regWatchWrap');
+        if (rw) rw.style.display = (role === 'viewer') ? 'block' : 'none';
     }
     function getSelectedRegRole() {
         var c = document.querySelector('#regRoleRow input[name="regRole"]:checked');
-        return (c && c.value === 'viewer') ? 'viewer' : 'worker';
+        if (!c) return 'worker';
+        if (c.value === 'viewer') return 'viewer';
+        if (c.value === 'admin') return 'admin';
+        return 'worker';
     }
     function applyRoleUI(role, name) {
         var isViewer = role === 'viewer';
+        var isAdmin = role === 'admin';
         document.body.classList.toggle('role-viewer', isViewer);
+        document.body.classList.toggle('role-admin', isAdmin);
         var box = document.getElementById('userAvatarBox');
         var nm = document.getElementById('userAvatarName');
         var bd = document.getElementById('userRoleBadge');
         if (box) box.classList.add('show');
         if (nm) nm.textContent = name || '—';
         if (bd) {
-            bd.textContent = isViewer ? 'Kuzatuvchi' : 'Ishchi';
+            bd.textContent = isViewer ? 'Kuzatuvchi' : (isAdmin ? 'Admin' : 'Ishchi');
             bd.classList.toggle('viewer', isViewer);
         }
     }
     function clearRoleUI() {
         document.body.classList.remove('role-viewer');
+        document.body.classList.remove('role-admin');
         var box = document.getElementById('userAvatarBox');
         if (box) box.classList.remove('show');
+        if (typeof stopCloudListen === 'function') stopCloudListen();
     }
 
     function doRegister() {
@@ -4486,10 +4603,20 @@ html body:not(.theme-light) select {
         function ok() {
             var role = getSelectedRegRole();
             var users = getAuthUsers();
-            users[user] = { user:user, name:name||user, pass:p1, role:role, created:new Date().toISOString() };
+            var watchUser = (document.getElementById('regWatchUser')?.value||'').trim().toLowerCase();
+            if (role === 'viewer' && watchUser.length < 2) {
+                if (btn) btn.disabled = false;
+                setAuthMsg('Kuzatuvchi: ishchi loginini yozing');
+                return;
+            }
+            var uo = { user:user, name:name||user, pass:p1, role:role, watchUser:watchUser, created:new Date().toISOString() };
+            users[user] = uo;
             setAuthUsers(users);
+            if (typeof publishUserMeta === 'function') publishUserMeta(uo);
             if (btn) btn.disabled = false;
-            setAuthMsg(role==='viewer' ? 'Kuzatuvchi yaratildi — kiring' : 'Ro‘yxat OK — endi kiring', true);
+            setAuthMsg(role==='viewer' ? 'Kuzatuvchi yaratildi — ishchi login bilan kiring' : 'Ro‘yxat OK — endi kiring', true);
+            var lwu = document.getElementById('loginWatchUser');
+            if (lwu && watchUser) lwu.value = watchUser;
             showAuthTab('login');
             var lu = document.getElementById('loginUser');
             if (lu) lu.value = user;
@@ -4516,18 +4643,28 @@ html body:not(.theme-light) select {
         var btn = document.getElementById('btnDoLogin');
         if (btn) btn.disabled = true;
         function finish(name, role) {
-            var r = role || (getAuthUsers()[user] && getAuthUsers()[user].role) || 'worker';
-            setSession({ user:user, name:name||user, role:r, at:Date.now() });
-            setAuthMsg(r==='viewer' ? 'Kuzatuvchi: faqat ko‘rish' : 'Xush kelibsiz!', true);
+            var local = getAuthUsers()[user] || {};
+            var r = role || local.role || 'worker';
+            var watchUser = (document.getElementById('loginWatchUser')?.value||'').trim().toLowerCase() || local.watchUser || '';
+            if (r === 'viewer' && watchUser.length < 2) {
+                if (btn) btn.disabled = false;
+                setAuthMsg('Ishchi loginini yozing');
+                return;
+            }
+            setSession({ user:user, name:name||user, role:r, watchUser:watchUser, at:Date.now() });
+            if (typeof publishUserMeta === 'function') publishUserMeta({ user:user, name:name||user, role:r, watchUser:watchUser, created:local.created });
+            setAuthMsg(r==='viewer' ? ('Kuzatyapsiz: ' + watchUser) : 'Xush kelibsiz!', true);
             var go = function(){
                 if (btn) btn.disabled = false;
                 applyAuthGate();
                 applyRoleUI(r, name||user);
                 if (typeof startPresenceLoop === 'function') startPresenceLoop();
+                if (typeof startCloudListen === 'function') startCloudListen();
                 try {
                     if (!document.querySelector('#mainBody tr') && typeof yaratAsosiy==='function') yaratAsosiy();
                     if (typeof hisoblaAsosiy==='function') hisoblaAsosiy();
                 } catch(e){}
+                if (r === 'admin' && typeof adminRefresh === 'function') adminRefresh();
             };
             if (firebaseReady) pullCloudData().then(go); else setTimeout(go, 150);
         }
@@ -4591,26 +4728,34 @@ html body:not(.theme-light) select {
     
     // ===== Kim kuzatyapti (presence) =====
     var presenceTimer = null;
-    function presenceDocRef() {
-        if (!firebaseReady || !firebaseAuth || !firebaseAuth.currentUser || !firebaseDb) return null;
-        return firebaseDb.collection('factory').doc('ideal-water').collection('presence').doc(firebaseAuth.currentUser.uid);
+    function presenceColForSession() {
+        if (!firebaseReady || !firebaseDb) return null;
+        var sess = getSession();
+        if (!sess) return null;
+        var wkey = (sess.role === 'viewer') ? (sess.watchUser || '') : (sess.user || '');
+        wkey = String(wkey).toLowerCase();
+        if (!wkey) return null;
+        return firebaseDb.collection('factory').doc('workers').collection('u').doc(wkey).collection('presence');
     }
     function pushPresence() {
-        var ref = presenceDocRef();
-        if (!ref) return;
+        if (!firebaseReady || !firebaseAuth || !firebaseAuth.currentUser) return;
+        var col = presenceColForSession();
+        if (!col) return;
         var sess = getSession();
         if (!sess || !sess.user) return;
-        ref.set({
+        col.doc(firebaseAuth.currentUser.uid).set({
             name: sess.name || sess.user,
             login: sess.user,
             role: sess.role || 'worker',
+            watchUser: sess.watchUser || '',
             at: Date.now()
         }, { merge: true }).catch(function(){});
     }
     function clearPresence() {
-        var ref = presenceDocRef();
-        if (!ref) return;
-        ref.delete().catch(function(){});
+        if (!firebaseReady || !firebaseAuth || !firebaseAuth.currentUser) return;
+        var col = presenceColForSession();
+        if (!col) return;
+        col.doc(firebaseAuth.currentUser.uid).delete().catch(function(){});
     }
     function updateWatcherBanner(names) {
         var box = document.getElementById('watcherBanner');
@@ -4632,17 +4777,17 @@ html body:not(.theme-light) select {
         if (!firebaseReady || !firebaseDb || !isLoggedIn()) return;
         var sess = getSession();
         if (sess && sess.role === 'viewer') return; // kuzatuvchiga kerak emas
-        firebaseDb.collection('factory').doc('ideal-water').collection('presence').get()
-            .then(function(snap) {
+        var col = presenceColForSession();
+        if (!col) return;
+        col.get().then(function(snap) {
                 var now = Date.now();
                 var names = [];
                 snap.forEach(function(doc) {
                     var d = doc.data() || {};
                     if (d.role !== 'viewer') return;
-                    if (now - (d.at || 0) > 45000) return; // 45s dan eski — offline
+                    if (now - (d.at || 0) > 45000) return;
                     names.push(d.name || d.login || 'Kuzatuvchi');
                 });
-                // unique
                 names = names.filter(function(v, i, a){ return a.indexOf(v) === i; });
                 updateWatcherBanner(names);
             }).catch(function(){});
@@ -4794,6 +4939,7 @@ html body:not(.theme-light) select {
             var sess = typeof getSession === 'function' ? getSession() : null;
             if (sess && sess.user && typeof applyRoleUI === 'function') applyRoleUI(sess.role||'worker', sess.name||sess.user);
             if (sess && sess.user && typeof startPresenceLoop === 'function') startPresenceLoop();
+            if (sess && sess.user && typeof startCloudListen === 'function') startCloudListen();
         } catch(e){}
         // F5 / ochilganda — doim bugungi kunlik sana
         const now = new Date();
@@ -4843,6 +4989,25 @@ html body:not(.theme-light) select {
 </script>
 
 
+
+
+    <div id="page-admin" class="page no-print">
+        <div class="card p-4 mb-4">
+            <h2 class="font-bold text-lg mb-2"><i class="fa-solid fa-shield-halved text-amber-400 mr-2"></i>Admin panel</h2>
+            <p class="text-sm text-slate-400 mb-3">Foydalanuvchilar va bog‘lanishlar</p>
+            <button type="button" onclick="adminRefresh()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-2 rounded-lg mb-3">Yangilash</button>
+            <div class="scroll-x">
+                <table style="min-width:640px">
+                    <thead><tr><th>Login</th><th>Ism</th><th>Rol</th><th>Kuzatadi</th><th>Yaratilgan</th></tr></thead>
+                    <tbody id="adminUsersBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card p-4">
+            <h3 class="font-semibold text-sm mb-2">Cloud foydalanuvchilar</h3>
+            <div id="adminOnlineBody" class="text-sm text-slate-300">—</div>
+        </div>
+    </div>
 
 <!-- Oylik tarix to'liq oynasi -->
 <div id="oylikTarixModal" class="app-modal-overlay no-print" onclick="if(event.target===this)yopOylikTarixModal()">
@@ -4980,7 +5145,7 @@ html body:not(.theme-light) select {
   </div>
   <div id="pcInstallHint" style="display:none;margin-top:10px;font-size:11px;color:#cbd5e1;line-height:1.45;background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 10px">
     <b>Kompyuter (Chrome / Edge):</b><br>
-    1) Saytni <b>https://</b> orqali oching (GitHub Pages)<br>
+    1) Saytni <b>https://</b> orqali oching<br>
     2) Manzil satri o‘ngida <b>⊕ o‘rnatish</b> yoki monitor belgisini bosing<br>
     3) Yoki ⋮ menyu → <b>Ilovani o‘rnatish / Install app</b><br>
     4) Tasdiqlang — ish stoli / Start menyuda chiqadi
