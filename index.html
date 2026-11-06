@@ -4418,18 +4418,26 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         window.__idealCloudApplying = false;
         // UI yangilash — mavjud funksiyalar
         try {
+            var sess = typeof getSession === 'function' ? getSession() : null;
+            var isViewer = sess && sess.role === 'viewer';
             if (typeof tarix !== 'undefined') tarix = JSON.parse(localStorage.getItem('idealWaterTarix')||'[]');
             if (typeof oylikTarix !== 'undefined') oylikTarix = JSON.parse(localStorage.getItem('idealWaterOylikTarix')||'[]');
             if (typeof litrTarix !== 'undefined') litrTarix = JSON.parse(localStorage.getItem('idealWaterLitrTarix')||'[]');
             if (typeof chizTarix === 'function') chizTarix();
             if (typeof chizOylikTarix === 'function') chizOylikTarix();
             if (typeof chizLitrTarix === 'function') chizLitrTarix();
-            var d = document.getElementById('reportDate')?.value;
-            if (d && typeof loadDateData === 'function') loadDateData(d);
-            if (typeof loadOylikDateData === 'function') loadOylikDateData();
-            var ld = document.getElementById('litrDate')?.value;
-            if (ld && typeof loadLitrDateData === 'function') loadLitrDateData(ld);
+            // Ishchi yozayotganda formani majburiy qayta yuklamaslik — faqat kuzatuvchi/admin yangilaydi
+            if (isViewer || (sess && sess.role === 'admin')) {
+                var d = document.getElementById('reportDate')?.value;
+                if (d && typeof loadDateData === 'function') loadDateData(d);
+                if (typeof loadOylikDateData === 'function') loadOylikDateData();
+                var ld = document.getElementById('litrDate')?.value;
+                if (ld && typeof loadLitrDateData === 'function') loadLitrDateData(ld);
+            }
             if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy();
+            if (typeof hisoblaKomp === 'function') hisoblaKomp();
+            if (typeof hisoblaIshchi === 'function') hisoblaIshchi();
+            if (typeof hisoblaLitr === 'function') hisoblaLitr();
         } catch(e) { console.warn(e); }
     }
     function workerKeyForSync() {
@@ -4453,6 +4461,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         var payload = collectLocalData();
         payload.owner = key;
         payload.updatedBy = sess.user;
+        lastLocalPushAt = payload.updatedAt || Date.now();
         ref.set(payload, { merge: true }).catch(function(e){ console.warn(e); });
     }
     function scheduleCloudSync() {
@@ -4467,6 +4476,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         if (typeof cloudUnsub === 'function') { try { cloudUnsub(); } catch(e){} }
         cloudUnsub = null;
     }
+    var lastLocalPushAt = 0;
     function startCloudListen() {
         stopCloudListen();
         if (!firebaseReady || !firebaseDb || !isLoggedIn()) return;
@@ -4476,7 +4486,16 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         if (!ref) return;
         cloudUnsub = ref.onSnapshot(function(snap) {
             if (!snap.exists) return;
-            applyLocalData(snap.data());
+            var data = snap.data() || {};
+            var sess = getSession();
+            // Ishchi: o'zi yuborgan snapshotni qayta formaga yuklamaslik (yozgan narsa o'chib ketmasin)
+            if (sess && sess.role !== 'viewer') {
+                var up = data.updatedAt || 0;
+                if (data.updatedBy === sess.user && up && up <= (lastLocalPushAt + 2000)) {
+                    return;
+                }
+            }
+            applyLocalData(data);
         }, function(err){ console.warn(err); });
     }
     function pullCloudData() {
@@ -4525,15 +4544,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
                 }).catch(function(){ online.textContent='Cloud o‘qilmadi'; });
         }
     }
-    document.addEventListener('input', function(e) {
-        if (!isLoggedIn()) return;
-        var sess = getSession();
-        if (!sess || sess.role === 'viewer') return;
-        var t = e.target;
-        if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && t.tagName !== 'TEXTAREA')) return;
-        if (t.closest && t.closest('#authScreen')) return;
-        scheduleCloudSync();
-    }, true);
+    /* inputda avto-cloud YOQ — forma tozalanib ketmasin; faqat localStorage yozilganda sync */
     // localStorage yozilganda cloudga ham (mavjud kodni o'zgartirmasdan)
     (function() {
         var _set = localStorage.setItem.bind(localStorage);
