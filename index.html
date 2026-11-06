@@ -2369,6 +2369,36 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
 #navAdminBtn { border: 1px solid rgba(251,191,36,0.4); color: #fbbf24; }
 #navAdminBtn.active { background: #b45309; color: #fff; }
 </style>
+<style>
+.auth-btn-google {
+  width: 100%; margin-top: 10px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #334155; background: #fff; color: #111827;
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.auth-btn-google:hover { background: #f8fafc; }
+.auth-divider {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 6px;
+  color: #64748b; font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: #334155;
+}
+#googleRoleModal {
+  display: none; position: fixed; inset: 0; z-index: 100001;
+  background: rgba(2,6,23,0.72); align-items: center; justify-content: center;
+}
+#googleRoleModal.show { display: flex; }
+#googleRoleModal .box {
+  background: #111827; border: 1px solid #334155; border-radius: 14px;
+  padding: 18px; width: min(380px, 92vw); color: #e2e8f0;
+}
+#googleRoleModal label { display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; }
+#googleRoleModal select, #googleRoleModal input {
+  width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+  color: #f1f5f9; padding: 10px; min-height: 42px;
+}
+</style>
 </head>
 <body>
 
@@ -2393,6 +2423,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         <input type="text" id="loginWatchUser" placeholder="Kuzatiladigan ishchi logini">
       </div>
       <button type="button" class="auth-btn" id="btnDoLogin" onclick="doLogin()">Kirish</button>
+      <div class="auth-divider">yoki</div>
+      <button type="button" class="auth-btn-google" id="btnGoogleLogin" onclick="doGoogleLogin()">
+        <i class="fa-brands fa-google" style="color:#ea4335"></i> Google orqali kirish
+      </button>
     </div>
     <div id="authRegister" class="auth-panel">
       <div class="auth-field"><label>Ism</label>
@@ -4686,6 +4720,112 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             finish(u.name||user, u.role);
         }
     }
+    
+    // ===== Google kirish =====
+    var pendingGoogle = null;
+    function googleLoginKey(user) {
+        var email = (user.email || '').toLowerCase();
+        if (email) return email;
+        return ('g_' + (user.uid || '')).toLowerCase();
+    }
+    function openGoogleRoleModal(login, name) {
+        pendingGoogle = { login: login, name: name };
+        var hint = document.getElementById('googleRoleHint');
+        if (hint) hint.textContent = name + ' · birinchi kirish — rol tanlang';
+        var sel = document.getElementById('googleRoleSelect');
+        if (sel) sel.value = 'worker';
+        var ww = document.getElementById('googleWatchWrap');
+        if (ww) ww.style.display = 'none';
+        var m = document.getElementById('googleRoleModal');
+        if (m) m.classList.add('show');
+    }
+    function onGoogleRoleChange() {
+        var sel = document.getElementById('googleRoleSelect');
+        var ww = document.getElementById('googleWatchWrap');
+        if (ww && sel) ww.style.display = sel.value === 'viewer' ? 'block' : 'none';
+    }
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'googleRoleSelect') onGoogleRoleChange();
+    });
+    function finishGoogleSession(login, name, role, watchUser) {
+        var users = getAuthUsers();
+        var uo = users[login] || {};
+        uo.user = login;
+        uo.name = name || uo.name || login;
+        uo.role = role || uo.role || 'worker';
+        uo.watchUser = watchUser || uo.watchUser || '';
+        uo.provider = 'google';
+        if (!uo.created) uo.created = new Date().toISOString();
+        users[login] = uo;
+        setAuthUsers(users);
+        if (typeof publishUserMeta === 'function') publishUserMeta(uo);
+        setSession({ user: login, name: uo.name, role: uo.role, watchUser: uo.watchUser, at: Date.now() });
+        setAuthMsg(uo.role === 'viewer' ? ('Kuzatyapsiz: ' + (uo.watchUser || '—')) : 'Google: xush kelibsiz!', true);
+        var m = document.getElementById('googleRoleModal');
+        if (m) m.classList.remove('show');
+        applyAuthGate();
+        applyRoleUI(uo.role, uo.name);
+        if (typeof startPresenceLoop === 'function') startPresenceLoop();
+        if (typeof startCloudListen === 'function') startCloudListen();
+        if (firebaseReady && typeof pullCloudData === 'function') pullCloudData();
+        
+    }
+    function confirmGoogleRole() {
+        if (!pendingGoogle) return;
+        var role = (document.getElementById('googleRoleSelect')?.value) || 'worker';
+        var watch = (document.getElementById('googleWatchUser')?.value || '').trim().toLowerCase();
+        if (role === 'viewer' && watch.length < 2) {
+            setAuthMsg('Kuzatuvchi uchun ishchi loginini yozing');
+            return;
+        }
+        finishGoogleSession(pendingGoogle.login, pendingGoogle.name, role, watch);
+        pendingGoogle = null;
+    }
+    function doGoogleLogin() {
+        if (!firebaseReady || !firebaseAuth) {
+            setAuthMsg('Firebase tayyor emas — Console da Google yoqing');
+            return;
+        }
+        var btn = document.getElementById('btnGoogleLogin');
+        if (btn) btn.disabled = true;
+        var provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        firebaseAuth.signInWithPopup(provider)
+            .then(function(cred) {
+                if (btn) btn.disabled = false;
+                var u = cred.user;
+                var login = googleLoginKey(u);
+                var name = u.displayName || login;
+                var users = getAuthUsers();
+                if (users[login] && users[login].role) {
+                    var watch = (document.getElementById('loginWatchUser')?.value || '').trim().toLowerCase()
+                        || users[login].watchUser || '';
+                    if (users[login].role === 'viewer' && watch.length < 2) {
+                        pendingGoogle = { login: login, name: name };
+                        openGoogleRoleModal(login, name);
+                        var sel = document.getElementById('googleRoleSelect');
+                        if (sel) sel.value = 'viewer';
+                        onGoogleRoleChange();
+                        return;
+                    }
+                    finishGoogleSession(login, name, users[login].role, watch);
+                } else {
+                    openGoogleRoleModal(login, name);
+                }
+            })
+            .catch(function(err) {
+                if (btn) btn.disabled = false;
+                var c = (err && err.code) || '';
+                if (c.indexOf('popup-closed') >= 0) setAuthMsg('Oyna yopildi');
+                else if (c.indexOf('unauthorized-domain') >= 0)
+                    setAuthMsg('Firebase: Authorized domains ga sayt domenini qo‘shing');
+                else if (c.indexOf('operation-not-allowed') >= 0)
+                    setAuthMsg('Firebase Console: Google sign-in yoqing');
+                else setAuthMsg('Google xato: ' + (err.message || c || 'noma’lum'));
+            });
+    }
+
+
     function doLogout() {
         if (!confirm('Chiqasizmi?')) return;
         try { if (typeof clearPresence === 'function') clearPresence(); } catch(e){}
@@ -5107,6 +5247,24 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             <button type="button" class="btn-modal-yes" onclick="closeClearModal(true)">Ha, tozala</button>
         </div>
     </div>
+</div>
+
+<!-- Google birinchi kirish: rol tanlash -->
+<div id="googleRoleModal" class="no-print">
+  <div class="box">
+    <h3 style="margin:0 0 6px;font-size:16px">Google akkaunt</h3>
+    <p style="margin:0 0 10px;font-size:12px;color:#94a3b8" id="googleRoleHint">Rolni tanlang (birinchi marta)</p>
+    <label>Rol</label>
+    <select id="googleRoleSelect">
+      <option value="worker">Ishchi</option>
+      <option value="viewer">Kuzatuvchi</option>
+          </select>
+    <div id="googleWatchWrap" style="display:none">
+      <label>Ishchi login (kuzatish)</label>
+      <input type="text" id="googleWatchUser" placeholder="masalan: vali">
+    </div>
+    <button type="button" class="auth-btn" style="margin-top:14px" onclick="confirmGoogleRole()">Davom etish</button>
+  </div>
 </div>
 
 <!-- Ilovani o'rnatish (PC + telefon) -->
