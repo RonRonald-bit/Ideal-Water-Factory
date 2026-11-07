@@ -3134,6 +3134,60 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         });
     }
 
+    
+    function downloadBlobFile(blob, filename) {
+        try {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'hisobot.pdf';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                try { URL.revokeObjectURL(url); } catch (e) {}
+                try { a.remove(); } catch (e) {}
+            }, 2000);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+    /** PDF ni darhol ulashish (Telegram va boshqalar) — telefon + PC */
+    function shareOrSavePdf(blob, filename) {
+        filename = filename || 'Ideal-Water.pdf';
+        if (!(blob instanceof Blob)) {
+            downloadBlobFile(blob, filename);
+            return Promise.resolve();
+        }
+        var file = new File([blob], filename, { type: 'application/pdf' });
+        var data = { files: [file], title: filename, text: 'Ideal-Water hisobot PDF' };
+        // 1) Fayl ulashish (Android / iOS / ba'zi desktop)
+        if (navigator.share) {
+            var can = true;
+            try {
+                if (navigator.canShare && !navigator.canShare(data)) can = false;
+            } catch (e) { can = false; }
+            if (can) {
+                return navigator.share(data).then(function() {
+                    if (typeof showToast === 'function') showToast('Ulashish oynasi ochildi', 'ok');
+                }).catch(function(err) {
+                    if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+                        if (typeof showToast === 'function') showToast('Ulashish bekor', 'ok');
+                        return;
+                    }
+                    // Share ishlamasa — saqlash
+                    downloadBlobFile(blob, filename);
+                    if (typeof showToast === 'function') showToast('PDF yuklandi (ulashish yo‘q)', 'ok');
+                });
+            }
+        }
+        // 2) Fallback — faylni yuklab olish
+        downloadBlobFile(blob, filename);
+        if (typeof showToast === 'function') showToast('PDF saqlandi', 'ok');
+        return Promise.resolve();
+    }
+
+
     function downloadPagePdf(pageId, filename, dateTextId, dateVal) {
         var pg = document.getElementById(pageId);
         if (!pg) return;
@@ -3265,13 +3319,14 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             // layout settle
             setTimeout(function() {
                 try {
-                    html2pdf().set(opt).from(pg).save().then(function() {
+                    html2pdf().set(opt).from(pg).outputPdf('blob').then(function(blob) {
                         clearTimeout(safety);
                         cleanupPrint();
-                        if (typeof showToast === 'function') showToast('PDF saqlandi', 'ok');
+                        return shareOrSavePdf(blob, filename);
                     }).catch(function() {
                         clearTimeout(safety);
                         cleanupPrint();
+                        if (typeof showToast === 'function') showToast('PDF xato', 'err');
                     });
                 } catch (e) {
                     clearTimeout(safety);
@@ -3281,18 +3336,53 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             return;
         }
 
-        // Kompyuter — @media print, flash yo'q
+        // Kompyuter ham — PDF blob + ulashish (Telegram)
+        document.documentElement.classList.add('pdf-capturing');
+        document.body.classList.add('pdf-capturing');
+        document.body.style.setProperty('background', '#ffffff', 'important');
+        document.body.style.setProperty('color', '#000000', 'important');
         pg.style.setProperty('display', 'block', 'important');
         pg.style.setProperty('opacity', '1', 'important');
         pg.style.setProperty('visibility', 'visible', 'important');
-        function afterPrint() {
-            window.removeEventListener('afterprint', afterPrint);
-            clearTimeout(safety);
-            cleanupPrint();
-        }
-        window.addEventListener('afterprint', afterPrint);
-        try { window.print(); } catch (e) {}
-        setTimeout(function() { clearTimeout(safety); cleanupPrint(); }, 1500);
+        pg.style.setProperty('background', '#ffffff', 'important');
+        pg.style.setProperty('color', '#000000', 'important');
+        pg.style.setProperty('width', '1100px', 'important');
+        pg.style.setProperty('min-width', '1100px', 'important');
+        var optPc = {
+            margin: [4, 4, 4, 4],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        if (typeof showToast === 'function') showToast('PDF tayyorlanmoqda…', 'ok');
+        setTimeout(function() {
+            if (typeof html2pdf === 'undefined') {
+                // html2pdf yo'q — eski print
+                window.addEventListener('afterprint', function ap() {
+                    window.removeEventListener('afterprint', ap);
+                    clearTimeout(safety);
+                    cleanupPrint();
+                });
+                try { window.print(); } catch (e) {}
+                setTimeout(function() { clearTimeout(safety); cleanupPrint(); }, 1500);
+                return;
+            }
+            try {
+                html2pdf().set(optPc).from(pg).outputPdf('blob').then(function(blob) {
+                    clearTimeout(safety);
+                    cleanupPrint();
+                    return shareOrSavePdf(blob, filename);
+                }).catch(function() {
+                    clearTimeout(safety);
+                    cleanupPrint();
+                });
+            } catch (e) {
+                clearTimeout(safety);
+                cleanupPrint();
+            }
+        }, 120);
     }
 
     function printKunlik() {
