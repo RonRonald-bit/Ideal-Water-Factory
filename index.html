@@ -2399,6 +2399,36 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
   color: #f1f5f9; padding: 10px; min-height: 42px;
 }
 </style>
+<style>
+#pdfActionModal {
+  display: none; position: fixed; inset: 0; z-index: 100050;
+  background: rgba(2,6,23,0.75); align-items: center; justify-content: center;
+  padding: 16px;
+}
+#pdfActionModal.show { display: flex; }
+.pdf-act-box {
+  background: #111827; border: 1px solid #334155; border-radius: 16px;
+  padding: 20px 18px; width: min(380px, 94vw); text-align: center; color: #e2e8f0;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+}
+.pdf-act-icon { font-size: 36px; color: #f87171; margin-bottom: 8px; }
+.pdf-act-box h3 { margin: 0 0 6px; font-size: 18px; }
+.pdf-act-name { margin: 0 0 8px; font-size: 13px; color: #93c5fd; word-break: break-all; }
+.pdf-act-hint { margin: 0 0 14px; font-size: 12px; color: #94a3b8; line-height: 1.4; }
+.pdf-act-btns { display: flex; flex-direction: column; gap: 8px; }
+.pdf-btn {
+  width: 100%; padding: 12px 14px; border-radius: 10px; border: none;
+  font-weight: 700; font-size: 14px; cursor: pointer; color: #fff;
+}
+.pdf-btn-save { background: #2563eb; }
+.pdf-btn-share { background: #0d9488; }
+.pdf-btn-both { background: #7c3aed; }
+.pdf-btn-cancel {
+  margin-top: 10px; background: transparent; border: none; color: #94a3b8;
+  font-size: 13px; cursor: pointer; width: 100%; padding: 8px;
+}
+.pdf-btn-cancel:hover { color: #e2e8f0; }
+</style>
 </head>
 <body>
 
@@ -3135,6 +3165,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
     }
 
     
+    
+    var pendingPdfBlob = null;
+    var pendingPdfName = 'Ideal-Water.pdf';
+
     function downloadBlobFile(blob, filename) {
         try {
             var url = URL.createObjectURL(blob);
@@ -3147,43 +3181,67 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             setTimeout(function() {
                 try { URL.revokeObjectURL(url); } catch (e) {}
                 try { a.remove(); } catch (e) {}
-            }, 2000);
-        } catch (e) {
-            console.warn(e);
-        }
+            }, 2500);
+            if (typeof showToast === 'function') showToast('PDF saqlandi', 'ok');
+        } catch (e) { console.warn(e); }
     }
-    /** PDF ni darhol ulashish (Telegram va boshqalar) — telefon + PC */
-    function shareOrSavePdf(blob, filename) {
+    function sharePdfBlob(blob, filename) {
         filename = filename || 'Ideal-Water.pdf';
-        if (!(blob instanceof Blob)) {
-            downloadBlobFile(blob, filename);
-            return Promise.resolve();
-        }
+        if (!(blob instanceof Blob)) return Promise.resolve();
         var file = new File([blob], filename, { type: 'application/pdf' });
         var data = { files: [file], title: filename, text: 'Ideal-Water hisobot PDF' };
-        // 1) Fayl ulashish (Android / iOS / ba'zi desktop)
-        if (navigator.share) {
-            var can = true;
-            try {
-                if (navigator.canShare && !navigator.canShare(data)) can = false;
-            } catch (e) { can = false; }
-            if (can) {
-                return navigator.share(data).then(function() {
-                    if (typeof showToast === 'function') showToast('Ulashish oynasi ochildi', 'ok');
-                }).catch(function(err) {
-                    if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
-                        if (typeof showToast === 'function') showToast('Ulashish bekor', 'ok');
-                        return;
-                    }
-                    // Share ishlamasa — saqlash
-                    downloadBlobFile(blob, filename);
-                    if (typeof showToast === 'function') showToast('PDF yuklandi (ulashish yo‘q)', 'ok');
-                });
-            }
+        if (!navigator.share) {
+            if (typeof showToast === 'function') showToast('Bu brauzerda ulashish yo‘q — saqlang', 'err');
+            return Promise.resolve();
         }
-        // 2) Fallback — faylni yuklab olish
-        downloadBlobFile(blob, filename);
-        if (typeof showToast === 'function') showToast('PDF saqlandi', 'ok');
+        var can = true;
+        try { if (navigator.canShare && !navigator.canShare(data)) can = false; } catch (e) { can = false; }
+        if (!can) {
+            if (typeof showToast === 'function') showToast('Ulashish qo‘llab-quvvatlanmaydi', 'err');
+            return Promise.resolve();
+        }
+        return navigator.share(data).then(function() {
+            if (typeof showToast === 'function') showToast('Ulashish ochildi', 'ok');
+        }).catch(function(err) {
+            if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+            if (typeof showToast === 'function') showToast('Ulashish bekor/xato', 'err');
+        });
+    }
+    function openPdfActionModal(blob, filename) {
+        pendingPdfBlob = blob;
+        pendingPdfName = filename || 'Ideal-Water.pdf';
+        var m = document.getElementById('pdfActionModal');
+        var t = document.getElementById('pdfActionTitle');
+        if (t) t.textContent = pendingPdfName;
+        if (m) m.classList.add('show');
+    }
+    function closePdfActionModal() {
+        var m = document.getElementById('pdfActionModal');
+        if (m) m.classList.remove('show');
+    }
+    function pdfActionSave() {
+        if (pendingPdfBlob) downloadBlobFile(pendingPdfBlob, pendingPdfName);
+        closePdfActionModal();
+    }
+    function pdfActionShare() {
+        if (!pendingPdfBlob) { closePdfActionModal(); return; }
+        sharePdfBlob(pendingPdfBlob, pendingPdfName).finally(function() {
+            closePdfActionModal();
+        });
+    }
+    function pdfActionBoth() {
+        if (!pendingPdfBlob) { closePdfActionModal(); return; }
+        downloadBlobFile(pendingPdfBlob, pendingPdfName);
+        // biroz kutib ulashish (download ishga tushsin)
+        setTimeout(function() {
+            sharePdfBlob(pendingPdfBlob, pendingPdfName).finally(function() {
+                closePdfActionModal();
+            });
+        }, 400);
+    }
+    /** PDF tayyor → tanlov: saqlash / ulashish / ikkalasi */
+    function shareOrSavePdf(blob, filename) {
+        openPdfActionModal(blob, filename || 'Ideal-Water.pdf');
         return Promise.resolve();
     }
 
@@ -5337,6 +5395,28 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             <button type="button" class="btn-modal-yes" onclick="closeClearModal(true)">Ha, tozala</button>
         </div>
     </div>
+</div>
+
+<!-- PDF: saqlash / ulashish -->
+<div id="pdfActionModal" class="no-print">
+  <div class="pdf-act-box">
+    <div class="pdf-act-icon"><i class="fa-solid fa-file-pdf"></i></div>
+    <h3>PDF tayyor</h3>
+    <p id="pdfActionTitle" class="pdf-act-name">hisobot.pdf</p>
+    <p class="pdf-act-hint">Saqlang, ulashing yoki ikkalasini qiling (Telegram va boshqalar)</p>
+    <div class="pdf-act-btns">
+      <button type="button" class="pdf-btn pdf-btn-save" onclick="pdfActionSave()">
+        <i class="fa-solid fa-download"></i> Saqlash
+      </button>
+      <button type="button" class="pdf-btn pdf-btn-share" onclick="pdfActionShare()">
+        <i class="fa-solid fa-share-nodes"></i> Ulashish
+      </button>
+      <button type="button" class="pdf-btn pdf-btn-both" onclick="pdfActionBoth()">
+        <i class="fa-solid fa-check-double"></i> Ikkalasi
+      </button>
+    </div>
+    <button type="button" class="pdf-btn-cancel" onclick="closePdfActionModal()">Yopish</button>
+  </div>
 </div>
 
 <!-- Google birinchi kirish: rol tanlash -->
