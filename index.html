@@ -3703,6 +3703,8 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             console.error(e);
             alert('Saqlashda xato: ' + (e.message || e));
         }
+    
+        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
     }
 
 
@@ -3790,6 +3792,8 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         saveCurrentDateData();
         chizOylikTarix();
         showToast(date + ' — oylik saqlandi', 'ok');
+    
+        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
     }
     function chizOylikTarix() {
         const tbody = document.getElementById('oylikTarixBody');
@@ -4372,6 +4376,8 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         chizLitrTarix();
         hisoblaLitrOyJami(); // faqat shu yerda oy jamiga kiritiladi
         if (typeof showToast === 'function') showToast(date + ' — 5–10L saqlandi (' + j5 + ' / ' + j10 + ')', 'ok');
+    
+        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
     }
 
     function chizLitrTarix() {
@@ -4581,7 +4587,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         else screen.classList.remove('hidden');
     }
     function collectLocalData() {
-        var out = { updatedAt: Date.now() };
+        var out = { updatedAt: Date.now(), syncDevice: (navigator.userAgent||'').slice(0,40) };
         DATA_KEYS.forEach(function(k) {
             try {
                 var raw = localStorage.getItem(k);
@@ -4608,14 +4614,12 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             if (typeof chizTarix === 'function') chizTarix();
             if (typeof chizOylikTarix === 'function') chizOylikTarix();
             if (typeof chizLitrTarix === 'function') chizLitrTarix();
-            // Ishchi yozayotganda formani majburiy qayta yuklamaslik — faqat kuzatuvchi/admin yangilaydi
-            if (isViewer || (sess && sess.role === 'admin')) {
-                var d = document.getElementById('reportDate')?.value;
-                if (d && typeof loadDateData === 'function') loadDateData(d);
-                if (typeof loadOylikDateData === 'function') loadOylikDateData();
-                var ld = document.getElementById('litrDate')?.value;
-                if (ld && typeof loadLitrDateData === 'function') loadLitrDateData(ld);
-            }
+            // Barcha qurilmalar: cloud ma'lumoti formaga ham yuklansin
+            var d = document.getElementById('reportDate')?.value;
+            if (d && typeof loadDateData === 'function') loadDateData(d);
+            if (typeof loadOylikDateData === 'function') loadOylikDateData();
+            var ld = document.getElementById('litrDate')?.value;
+            if (ld && typeof loadLitrDateData === 'function') loadLitrDateData(ld);
             if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy();
             if (typeof hisoblaKomp === 'function') hisoblaKomp();
             if (typeof hisoblaIshchi === 'function') hisoblaIshchi();
@@ -4659,6 +4663,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         cloudUnsub = null;
     }
     var lastLocalPushAt = 0;
+    var lastAppliedCloudAt = 0;
     function startCloudListen() {
         stopCloudListen();
         if (!firebaseReady || !firebaseDb || !isLoggedIn()) return;
@@ -4669,14 +4674,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         cloudUnsub = ref.onSnapshot(function(snap) {
             if (!snap.exists) return;
             var data = snap.data() || {};
-            var sess = getSession();
-            // Ishchi: o'zi yuborgan snapshotni qayta formaga yuklamaslik (yozgan narsa o'chib ketmasin)
-            if (sess && sess.role !== 'viewer') {
-                var up = data.updatedAt || 0;
-                if (data.updatedBy === sess.user && up && up <= (lastLocalPushAt + 2000)) {
-                    return;
-                }
-            }
+            var up = data.updatedAt || 0;
+            if (up && lastLocalPushAt && up === lastLocalPushAt) return;
+            if (up && lastAppliedCloudAt && up <= lastAppliedCloudAt) return;
+            if (up) lastAppliedCloudAt = up;
             applyLocalData(data);
         }, function(err){ console.warn(err); });
     }
@@ -4850,7 +4851,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
                     if (!document.querySelector('#mainBody tr') && typeof yaratAsosiy==='function') yaratAsosiy();
                     if (typeof hisoblaAsosiy==='function') hisoblaAsosiy();
                 } catch(e){}
-                
+                if (!firebaseAuth || !firebaseAuth.currentUser) {
+                    if (typeof showToast === 'function') showToast('Cloud yo‘q: Firebase login shart (qurilmalar sinxron bo‘lmaydi)', 'err');
+                    else setAuthMsg('Firebase orqali kiring — aks holda qurilmalar farq qiladi');
+                }
             };
             if (firebaseReady) pullCloudData().then(go); else setTimeout(go, 150);
         }
@@ -5232,6 +5236,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             if (sess && sess.user && typeof applyRoleUI === 'function') applyRoleUI(sess.role||'worker', sess.name||sess.user);
             if (sess && sess.user && typeof startPresenceLoop === 'function') startPresenceLoop();
             if (sess && sess.user && typeof startCloudListen === 'function') startCloudListen();
+            if (sess && sess.user && typeof pullCloudData === 'function') pullCloudData();
         } catch(e){}
         // F5 / ochilganda — doim bugungi kunlik sana
         const now = new Date();
