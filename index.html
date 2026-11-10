@@ -4599,14 +4599,15 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
     function applyLocalData(data, force) {
         if (!data) return;
         var up = data.updatedAt || 0;
-        // Foydalanuvchi hozir yozayotgan bo'lsa — o'chirmaslik (2-qurilma konflikt)
-        if (!force && lastLocalEditAt && (Date.now() - lastLocalEditAt) < 12000) {
-            if (up && up <= lastLocalEditAt) return;
-            // cloud ancha yangi (boshqa qurilmada saqlangan) — keyinroq qo'llash mumkin
-            if (up && up > lastLocalEditAt + 500) {
-                // saqlashdan keyingi cloud — ruxsat
-            } else {
+        var sess = typeof getSession === 'function' ? getSession() : null;
+        // Shu qurilmada hozir yozilayotgan bo'lsa — o'z formani o'chirmaslik
+        if (!force && lastLocalEditAt && (Date.now() - lastLocalEditAt) < 2500) {
+            // Boshqa qurilmadan kelgan yangilanish (updatedBy boshqa) — baribir qo'llash
+            if (data.updatedBy && sess && data.updatedBy === sess.user && up && up <= lastLocalPushAt + 500) {
                 return;
+            }
+            if (!data.updatedBy || (sess && data.updatedBy === sess.user)) {
+                if (!(up && up > lastLocalEditAt)) return;
             }
         }
         if (!force && up && lastAppliedCloudAt && up <= lastAppliedCloudAt) return;
@@ -4713,14 +4714,30 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         }).catch(function(e){ console.warn(e); });
     }
     function scheduleCloudSync() {
-        // Avto-sync faqat saqlashdan keyin — har localStorage da emas (2-qurilma o'chirishni oldini olish)
         if (!firebaseReady || !isLoggedIn()) return;
         var sess = getSession();
         if (sess && sess.role === 'viewer') return;
-        // no-op debounce for safety; real push on saqlash
+        clearTimeout(cloudSyncTimer);
+        // Yozayotganda 0.7s kutib cloudga — 2-qurilmada srazi ko'rinsin (Saqlash shart emas)
+        cloudSyncTimer = setTimeout(function() {
+            try { pushCloudData(true); } catch (e) {}
+        }, 700);
     }
     function markLocalEdit() {
         lastLocalEditAt = Date.now();
+    }
+    function syncFormDraftToStorage() {
+        try {
+            var page = document.querySelector('.page.active');
+            var pid = page ? page.id : '';
+            if (pid === 'page-oylik' || (pid && pid.indexOf('oylik') >= 0)) {
+                if (typeof saveCurrentOylikData === 'function') saveCurrentOylikData();
+            } else if (pid === 'page-litr' || (pid && pid.indexOf('litr') >= 0)) {
+                if (typeof saveCurrentLitrData === 'function') saveCurrentLitrData();
+            } else {
+                if (typeof saveCurrentDateData === 'function') saveCurrentDateData();
+            }
+        } catch (e) {}
     }
     document.addEventListener('input', function(e) {
         if (!isLoggedIn()) return;
@@ -4729,7 +4746,21 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         var t = e.target;
         if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && t.tagName !== 'TEXTAREA')) return;
         if (t.closest && t.closest('#authScreen')) return;
+        if (t.closest && t.closest('#pdfActionModal')) return;
         markLocalEdit();
+        syncFormDraftToStorage();
+        scheduleCloudSync();
+    }, true);
+    document.addEventListener('change', function(e) {
+        if (!isLoggedIn()) return;
+        var sess = getSession();
+        if (sess && sess.role === 'viewer') return;
+        var t = e.target;
+        if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT')) return;
+        if (t.closest && t.closest('#authScreen')) return;
+        markLocalEdit();
+        syncFormDraftToStorage();
+        scheduleCloudSync();
     }, true);
     var cloudUnsub = null;
     function stopCloudListen() {
@@ -4737,6 +4768,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         cloudUnsub = null;
     }
     var lastLocalPushAt = 0;
+    var cloudSyncTimer = null;
     var lastLocalEditAt = 0;
     var lastAppliedCloudAt = 0;
     function startCloudListen() {
