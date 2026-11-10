@@ -3704,7 +3704,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             alert('Saqlashda xato: ' + (e.message || e));
         }
     
-        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
+        try { if (typeof pushCloudData === 'function') { lastLocalEditAt = Date.now(); pushCloudData(true); } } catch(e){}
     }
 
 
@@ -3793,7 +3793,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         chizOylikTarix();
         showToast(date + ' — oylik saqlandi', 'ok');
     
-        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
+        try { if (typeof pushCloudData === 'function') { lastLocalEditAt = Date.now(); pushCloudData(true); } } catch(e){}
     }
     function chizOylikTarix() {
         const tbody = document.getElementById('oylikTarixBody');
@@ -4377,7 +4377,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         hisoblaLitrOyJami(); // faqat shu yerda oy jamiga kiritiladi
         if (typeof showToast === 'function') showToast(date + ' — 5–10L saqlandi (' + j5 + ' / ' + j10 + ')', 'ok');
     
-        try { if (typeof pushCloudData === 'function') { lastLocalPushAt = 0; pushCloudData(); } } catch(e){}
+        try { if (typeof pushCloudData === 'function') { lastLocalEditAt = Date.now(); pushCloudData(true); } } catch(e){}
     }
 
     function chizLitrTarix() {
@@ -4596,12 +4596,46 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         });
         return out;
     }
-    function applyLocalData(data) {
+    function applyLocalData(data, force) {
         if (!data) return;
+        var up = data.updatedAt || 0;
+        // Foydalanuvchi hozir yozayotgan bo'lsa — o'chirmaslik (2-qurilma konflikt)
+        if (!force && lastLocalEditAt && (Date.now() - lastLocalEditAt) < 12000) {
+            if (up && up <= lastLocalEditAt) return;
+            // cloud ancha yangi (boshqa qurilmada saqlangan) — keyinroq qo'llash mumkin
+            if (up && up > lastLocalEditAt + 500) {
+                // saqlashdan keyingi cloud — ruxsat
+            } else {
+                return;
+            }
+        }
+        if (!force && up && lastAppliedCloudAt && up <= lastAppliedCloudAt) return;
+        if (up) lastAppliedCloudAt = up;
         window.__idealCloudApplying = true;
         DATA_KEYS.forEach(function(k) {
             if (data[k] == null) return;
-            try { localStorage.setItem(k, JSON.stringify(data[k])); } catch(e){}
+            try {
+                // byDate larni birlashtirish — bo'sh obyekt eski sanalarni o'chirmasin
+                if (k.indexOf('ByDate') >= 0 && typeof data[k] === 'object') {
+                    var cur = {};
+                    try { cur = JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e) { cur = {}; }
+                    var merged = Object.assign({}, cur, data[k]);
+                    // bo'sh sana yozuvlari eski to'liqni o'chirmasin
+                    Object.keys(data[k]).forEach(function(dk) {
+                        var nv = data[k][dk];
+                        var ov = cur[dk];
+                        if (nv && typeof nv === 'object' && ov && typeof ov === 'object') {
+                            // yangi to'liqroq bo'lsa ol
+                            var nKeys = Object.keys(nv).filter(function(x){ return nv[x] !== '' && nv[x] != null; }).length;
+                            var oKeys = Object.keys(ov).filter(function(x){ return ov[x] !== '' && ov[x] != null; }).length;
+                            if (nKeys >= oKeys) merged[dk] = nv; else merged[dk] = ov;
+                        }
+                    });
+                    localStorage.setItem(k, JSON.stringify(merged));
+                } else {
+                    localStorage.setItem(k, JSON.stringify(data[k]));
+                }
+            } catch(e){}
         });
         window.__idealCloudApplying = false;
         // UI yangilash — mavjud funksiyalar
@@ -4636,8 +4670,9 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         if (!firebaseReady || !firebaseDb || !login) return null;
         return firebaseDb.collection('factory').doc('workers').collection('u').doc(String(login).toLowerCase());
     }
-    function pushCloudData() {
+    function pushCloudData(force) {
         if (!firebaseReady || !firebaseAuth || !firebaseDb || !firebaseAuth.currentUser) return;
+        if (window.__idealCloudApplying) return;
         var sess = getSession();
         if (!sess || sess.role === 'viewer') return;
         var key = workerKeyForSync();
@@ -4647,22 +4682,62 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         var payload = collectLocalData();
         payload.owner = key;
         payload.updatedBy = sess.user;
-        lastLocalPushAt = payload.updatedAt || Date.now();
-        ref.set(payload, { merge: true }).catch(function(e){ console.warn(e); });
+        // Avval cloudni o'qi — eski/bo'sh yozuv yangisini o'chirmasin
+        ref.get().then(function(snap) {
+            var remote = snap.exists ? (snap.data() || {}) : {};
+            var rUp = remote.updatedAt || 0;
+            var lUp = payload.updatedAt || Date.now();
+            // Cloud yangiroq va majburiy emas — localni ustiga yozma
+            if (!force && rUp > lUp && rUp > (lastLocalEditAt || 0)) {
+                applyLocalData(remote, true);
+                return;
+            }
+            DATA_KEYS.forEach(function(k) {
+                if (k.indexOf('ByDate') >= 0) {
+                    var a = (remote[k] && typeof remote[k] === 'object') ? remote[k] : {};
+                    var b = (payload[k] && typeof payload[k] === 'object') ? payload[k] : {};
+                    payload[k] = Object.assign({}, a, b);
+                } else if (Array.isArray(payload[k]) && Array.isArray(remote[k])) {
+                    // tarix: uzunroq / yangiroq ro'yxat
+                    if ((remote[k]||[]).length > (payload[k]||[]).length && rUp > lUp) {
+                        payload[k] = remote[k];
+                    }
+                } else if (payload[k] == null && remote[k] != null) {
+                    payload[k] = remote[k];
+                }
+            });
+            payload.updatedAt = Date.now();
+            lastLocalPushAt = payload.updatedAt;
+            lastAppliedCloudAt = payload.updatedAt;
+            return ref.set(payload, { merge: true });
+        }).catch(function(e){ console.warn(e); });
     }
     function scheduleCloudSync() {
+        // Avto-sync faqat saqlashdan keyin — har localStorage da emas (2-qurilma o'chirishni oldini olish)
         if (!firebaseReady || !isLoggedIn()) return;
         var sess = getSession();
         if (sess && sess.role === 'viewer') return;
-        clearTimeout(cloudSyncTimer);
-        cloudSyncTimer = setTimeout(pushCloudData, 250);
+        // no-op debounce for safety; real push on saqlash
     }
+    function markLocalEdit() {
+        lastLocalEditAt = Date.now();
+    }
+    document.addEventListener('input', function(e) {
+        if (!isLoggedIn()) return;
+        var sess = getSession();
+        if (sess && sess.role === 'viewer') return;
+        var t = e.target;
+        if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && t.tagName !== 'TEXTAREA')) return;
+        if (t.closest && t.closest('#authScreen')) return;
+        markLocalEdit();
+    }, true);
     var cloudUnsub = null;
     function stopCloudListen() {
         if (typeof cloudUnsub === 'function') { try { cloudUnsub(); } catch(e){} }
         cloudUnsub = null;
     }
     var lastLocalPushAt = 0;
+    var lastLocalEditAt = 0;
     var lastAppliedCloudAt = 0;
     function startCloudListen() {
         stopCloudListen();
@@ -4676,9 +4751,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             var data = snap.data() || {};
             var up = data.updatedAt || 0;
             if (up && lastLocalPushAt && up === lastLocalPushAt) return;
-            if (up && lastAppliedCloudAt && up <= lastAppliedCloudAt) return;
-            if (up) lastAppliedCloudAt = up;
-            applyLocalData(data);
+            applyLocalData(data, false);
         }, function(err){ console.warn(err); });
     }
     function pullCloudData() {
@@ -4734,7 +4807,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         localStorage.setItem = function(k, v) {
             _set(k, v);
             if (window.__idealCloudApplying) return;
-            if (DATA_KEYS.indexOf(k) >= 0) scheduleCloudSync();
+            if (DATA_KEYS.indexOf(k) >= 0) {
+                try { lastLocalEditAt = Date.now(); } catch(e){}
+                // cloudga faqat saqlash() da yoziladi — avto-push o'chirilgan
+            }
         };
     })();
 
