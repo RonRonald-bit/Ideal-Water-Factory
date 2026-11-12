@@ -3996,8 +3996,10 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
     }
 
     function saveCurrentDateData() {
-        const date = document.getElementById('reportDate')?.value || currentLoadedDate;
+        // Muhim: faqat currentLoadedDate ga yoz (reportDate allaqachon yangi bo'lishi mumkin)
+        var date = currentLoadedDate || document.getElementById('reportDate')?.value;
         if (!date) return;
+        if (dateChangeLock) return;
         try {
             const all = getAllDays();
             all[date] = collectKunlikData();
@@ -4057,22 +4059,34 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
 
     function onReportDateChange() {
         if (dateChangeLock) return;
-        const newDate = document.getElementById('reportDate')?.value;
+        var dateEl = document.getElementById('reportDate');
+        var newDate = dateEl ? dateEl.value : '';
         if (!newDate) return;
-        // Eski sanani avval saqlab qo'y (yo'qolmasin)
+        dateChangeLock = true;
         try {
-            var prev = currentLoadedDate || null;
+            // 1) Eski kun formadagi ma'lumotni SAQLA (yangi sanaga yozma!)
+            var prev = currentLoadedDate;
             if (prev && prev !== newDate) {
-                const all = getAllDays();
+                var all = getAllDays();
                 all[prev] = collectKunlikData();
                 setAllDays(all);
-            } else if (!prev) {
-                // birinchi marta — hozirgi formani newDate ga yozish shart emas, load qilamiz
             }
-        } catch (e) { console.warn(e); }
-        loadDateData(newDate);
-        try { if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy(); } catch(e){}
-        try { if (typeof hisoblaKomp === 'function') hisoblaKomp(); } catch(e){}
+            // 2) Yangi kunni yukla
+            if (!document.querySelector('#mainBody tr') && typeof yaratAsosiy === 'function') yaratAsosiy();
+            if (!document.querySelector('#kompBody tr') && typeof yaratKomp === 'function') yaratKomp();
+            var all2 = getAllDays();
+            applyKunlikData(all2[newDate] || null);
+            currentLoadedDate = newDate;
+            if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy();
+            if (typeof hisoblaKomp === 'function') hisoblaKomp();
+        } catch (e) {
+            console.warn(e);
+        }
+        dateChangeLock = false;
+        // Cloudga ham yangilangan byDate ketadi (merge)
+        try {
+            if (typeof scheduleCloudSync === 'function') scheduleCloudSync();
+        } catch (e) {}
     }
 
     function onOylikDateChange() {
@@ -4758,6 +4772,13 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             }
         } catch (e) {}
     }
+    function isDateNavField(t) {
+        if (!t || !t.id) return false;
+        // Sana almashtirish maydonlari — formani shu sanaga yozmaslik (eski kun o'chib ketmasin)
+        return t.id === 'reportDate' || t.id === 'litrDate' || t.id === 'oylikOy' || t.id === 'oylikYil'
+            || t.id === 'tarixFilterDate' || t.id === 'oylikTarixFilterOy' || t.id === 'oylikTarixFilterYil'
+            || t.id === 'litrTarixFilterDate';
+    }
     document.addEventListener('input', function(e) {
         if (!isLoggedIn()) return;
         var sess = getSession();
@@ -4766,6 +4787,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && t.tagName !== 'TEXTAREA')) return;
         if (t.closest && t.closest('#authScreen')) return;
         if (t.closest && t.closest('#pdfActionModal')) return;
+        if (isDateNavField(t)) return; // faqat sana — onReportDateChange o'zi saqlaydi
         markLocalEdit();
         syncFormDraftToStorage();
         scheduleCloudSync();
@@ -4777,6 +4799,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         var t = e.target;
         if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT')) return;
         if (t.closest && t.closest('#authScreen')) return;
+        if (isDateNavField(t)) return;
         markLocalEdit();
         syncFormDraftToStorage();
         scheduleCloudSync();
