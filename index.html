@@ -2562,7 +2562,7 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
         <div class="card no-print p-3 flex flex-wrap items-center gap-3 justify-between">
             <div class="flex items-center gap-2">
                 <span class="text-sm text-slate-400">Kunlik sana:</span>
-                <input type="date" id="reportDate" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white" style="width:150px;min-height:40px" onchange="onReportDateChange()">
+                <input type="date" id="reportDate" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white" style="width:150px;min-height:40px" onchange="onReportDateChange()" onblur="onReportDateChange()">
             </div>
             <div class="text-xs text-slate-500">Har kunlik hisobotni topshirishingiz kerak</div>
         </div>
@@ -3996,12 +3996,14 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
     }
 
     function saveCurrentDateData() {
-        const date = document.getElementById('reportDate')?.value;
+        const date = document.getElementById('reportDate')?.value || currentLoadedDate;
         if (!date) return;
-        const all = getAllDays();
-        all[date] = collectKunlikData();
-        setAllDays(all);
-        currentLoadedDate = date;
+        try {
+            const all = getAllDays();
+            all[date] = collectKunlikData();
+            setAllDays(all);
+            currentLoadedDate = date;
+        } catch (e) { console.warn(e); }
     }
 
     function saveCurrentOylikData() {
@@ -4020,10 +4022,19 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
     }
 
     function loadDateData(date) {
+        if (!date) return;
         dateChangeLock = true;
-        const all = getAllDays();
-        applyKunlikData(all[date] || null);
-        currentLoadedDate = date;
+        try {
+            if (!document.querySelector('#mainBody tr') && typeof yaratAsosiy === 'function') yaratAsosiy();
+            if (!document.querySelector('#kompBody tr') && typeof yaratKomp === 'function') yaratKomp();
+            const all = getAllDays();
+            applyKunlikData(all[date] || null);
+            currentLoadedDate = date;
+            var el = document.getElementById('reportDate');
+            if (el && el.value !== date) el.value = date;
+            if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy();
+            if (typeof hisoblaKomp === 'function') hisoblaKomp();
+        } catch (e) { console.warn(e); }
         dateChangeLock = false;
     }
 
@@ -4046,14 +4057,22 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
 
     function onReportDateChange() {
         if (dateChangeLock) return;
-        const newDate = document.getElementById('reportDate').value;
+        const newDate = document.getElementById('reportDate')?.value;
         if (!newDate) return;
-        if (currentLoadedDate && currentLoadedDate !== newDate) {
-            const all = getAllDays();
-            all[currentLoadedDate] = collectKunlikData();
-            setAllDays(all);
-        }
+        // Eski sanani avval saqlab qo'y (yo'qolmasin)
+        try {
+            var prev = currentLoadedDate || null;
+            if (prev && prev !== newDate) {
+                const all = getAllDays();
+                all[prev] = collectKunlikData();
+                setAllDays(all);
+            } else if (!prev) {
+                // birinchi marta — hozirgi formani newDate ga yozish shart emas, load qilamiz
+            }
+        } catch (e) { console.warn(e); }
         loadDateData(newDate);
+        try { if (typeof hisoblaAsosiy === 'function') hisoblaAsosiy(); } catch(e){}
+        try { if (typeof hisoblaKomp === 'function') hisoblaKomp(); } catch(e){}
     }
 
     function onOylikDateChange() {
@@ -5344,7 +5363,15 @@ body:not(.role-admin) #navAdminBtn { display: none !important; }
             if (sess && sess.user && typeof applyRoleUI === 'function') applyRoleUI(sess.role||'worker', sess.name||sess.user);
             if (sess && sess.user && typeof startPresenceLoop === 'function') startPresenceLoop();
             if (sess && sess.user && typeof startCloudListen === 'function') startCloudListen();
-            if (sess && sess.user && typeof pullCloudData === 'function') pullCloudData();
+            if (sess && sess.user && typeof pullCloudData === 'function') {
+                pullCloudData().then(function() {
+                    var d = document.getElementById('reportDate')?.value;
+                    if (d && typeof loadDateData === 'function') loadDateData(d);
+                    if (typeof loadOylikDateData === 'function') loadOylikDateData();
+                    var ld = document.getElementById('litrDate')?.value;
+                    if (ld && typeof loadLitrDateData === 'function') loadLitrDateData(ld);
+                }).catch(function(){});
+            }
         } catch(e){}
         // F5 / ochilganda — doim bugungi kunlik sana
         const now = new Date();
